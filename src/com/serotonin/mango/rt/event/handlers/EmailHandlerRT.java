@@ -44,6 +44,8 @@ import com.serotonin.web.email.EmailContent;
 import com.serotonin.web.email.EmailInline;
 import com.serotonin.web.i18n.LocalizableMessage;
 // will change this file in the future.for now want to test uploading of a branch to github.
+// this file was changed in master but I haven't merged master so it is differnet here now.
+// i think this is sortedout.
 public class EmailHandlerRT extends EventHandlerRT implements ModelTimeoutClient<EventInstance> {
     private static final Log LOG = LogFactory.getLog(EmailHandlerRT.class);
 
