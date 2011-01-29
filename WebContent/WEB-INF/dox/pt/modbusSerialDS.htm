@@ -1,0 +1,53 @@
+<!--
+    Mango - Open Source M2M - http://mango.serotoninsoftware.com
+    Copyright (C) 2006-2011 Serotonin Software Technologies Inc.
+    @author Matthew Lohbihler
+    
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see http://www.gnu.org/licenses/.
+ -->
+<h1>Overview</h1>
+<p>
+  The Modbus serial data source is used to gather data from a local modbus network, accessible via RS232 or RS485 
+  (requires adapter) communication. This is a polling data source.
+</p>
+
+<h1>Configuration</h1>
+<p>
+  Every data source requires a <b>Name</b>, which can be any description. The <b>Update period</b> determines how often 
+  the Modbus network is polled for data. The <b>Timeout</b> and <b>Retries</b> fields determine the system behaviour in 
+  the case of a polling failure. The data source waits the given number of timeout milliseconds for a response from the 
+  network. If it is not received the request will be retried the given number of times.
+</p>
+<p>
+  The <b>Contiguous batches only</b> checkbox can be used to specify that the modbus implementation should not attempt
+  to optimize disparate value requests into a single request. Checking this field will cause the implementation to only
+  make requests for multiple values when those value form contiguous register space.
+</p>
+<p>
+  Serial communication is controlled with the <b>Baud rate</b>, <b>Flow control in</b>, <b>Flow control out</b>, 
+  <b>Data bits</b>, <b>Stop bits</b>, and <b>Parity</b> values. The <b>Echo</b> setting can be used with RS485 networks 
+  as appropriate.
+</p>
+<p>
+  The <b>Encoding</b> value determines how Modbus requests are formatted. Most production hardware uses RTU formatted 
+  messages. See the Modbus documentation for your equipment to determine how to set this field.
+</p>
+
+<h1>Node scanning</h1>
+<p>
+  Networks can be scanned for slave nodes using the scan utility. This feature iterates from slave id 1 to 240, sending 
+  each a ReadExceptionStatus (function code 7). If a response is received (using the given timeout and retries 
+  settings), the node is considered available. Note that not all equipment supports this function code, so false 
+  negatives are possible.
+</p>
