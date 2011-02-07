@@ -53,6 +53,16 @@ public class AddressEntry extends EmailRecipient {
     }
 
     @Override
+    public void appendPhoneNumbers(Set<String> numbers, DateTime sendTime) {
+    	appendAllPhoneNumbers(numbers);
+    }    
+
+    @Override
+    public void appendAllPhoneNumbers(Set<String> numbers) {
+    	// addresses don't have phone numbers. no-op
+    }	    
+    
+    @Override
     public int getRecipientType() {
         return EmailRecipient.TYPE_ADDRESS;
     }

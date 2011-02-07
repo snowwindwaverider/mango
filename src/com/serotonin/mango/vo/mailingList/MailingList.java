@@ -120,6 +120,17 @@ public class MailingList extends EmailRecipient {
             e.appendAddresses(addresses, null);
     }
 
+    public void appendPhoneNumbers(Set<String> numbers, DateTime sendTime) {
+    	if (sendTime != null && inactiveIntervals.contains(getIntervalIdAt(sendTime)))
+    		return;
+    	appendAllPhoneNumbers(numbers);
+    }    
+
+    public void appendAllPhoneNumbers(Set<String> numbers) {
+    		for (EmailRecipient e : entries)
+    			e.appendPhoneNumbers(numbers, null);
+    }	
+    
     private static int getIntervalIdAt(DateTime dt) {
         int interval = 0;
         interval += dt.getMinuteOfHour() / 15;

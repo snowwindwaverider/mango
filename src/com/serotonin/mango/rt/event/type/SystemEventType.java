@@ -52,6 +52,8 @@ public class SystemEventType extends EventType {
     public static final int TYPE_EMAIL_SEND_FAILURE = 8;
     public static final int TYPE_POINT_LINK_FAILURE = 9;
     public static final int TYPE_PROCESS_FAILURE = 10;
+    
+    public static final int TYPE_SMS = 1001;
 
     public static final ExportCodes TYPE_CODES = new ExportCodes();
     static {
@@ -65,6 +67,7 @@ public class SystemEventType extends EventType {
         TYPE_CODES.addElement(TYPE_EMAIL_SEND_FAILURE, "EMAIL_SEND_FAILURE");
         TYPE_CODES.addElement(TYPE_POINT_LINK_FAILURE, "POINT_LINK_FAILURE");
         TYPE_CODES.addElement(TYPE_PROCESS_FAILURE, "PROCESS_FAILURE");
+        TYPE_CODES.addElement(TYPE_SMS, "SMS");
     }
 
     private static List<EventTypeVO> systemEventTypes;
@@ -84,6 +87,7 @@ public class SystemEventType extends EventType {
             addEventTypeVO(TYPE_EMAIL_SEND_FAILURE, "event.system.email", AlarmLevels.INFORMATION, dao);
             addEventTypeVO(TYPE_POINT_LINK_FAILURE, "event.system.pointLink", AlarmLevels.URGENT, dao);
             addEventTypeVO(TYPE_PROCESS_FAILURE, "event.system.process", AlarmLevels.URGENT, dao);
+            addEventTypeVO(TYPE_SMS, "event.system.sms", AlarmLevels.INFORMATION, dao);
         }
         return systemEventTypes;
     }
