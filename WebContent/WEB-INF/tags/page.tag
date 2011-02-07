@@ -95,6 +95,11 @@
             <span id="__header__alarmLevelText"></span>
           </span>
         </a>
+		<c:if test="${!empty sessionUser}"><br/>                
+	        <span id="__header__alarmsSuppressedDiv">
+	        Alarms Suppressed<input id="headerAlarmsSuppressed" type=checkbox onclick='__header__alarmsSuppressed();'/>
+	        </span>
+	    </c:if>        
       </td>
     </c:if>
     <c:if test="${!empty instanceDescription}">

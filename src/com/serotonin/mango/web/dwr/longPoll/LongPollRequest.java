@@ -34,6 +34,7 @@ public class LongPollRequest implements Serializable {
     private boolean pointDetails;
     private boolean pendingAlarms;
     private boolean customView;
+    private boolean inhibitEmailEventHandlers;
 
     private int anonViewId;
 
@@ -108,4 +109,12 @@ public class LongPollRequest implements Serializable {
     public void setCustomView(boolean customView) {
         this.customView = customView;
     }
+    
+    public boolean isInhibitEmailEventHandlers() {
+    	return inhibitEmailEventHandlers;
+    }
+    
+    public void setInhibitEmailEventHandlers(boolean inhibitEmailEventHandlers) {
+    	this.inhibitEmailEventHandlers = inhibitEmailEventHandlers;
+    }    
 }

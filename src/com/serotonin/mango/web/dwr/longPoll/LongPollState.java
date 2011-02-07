@@ -42,6 +42,7 @@ public class LongPollState implements Serializable {
     private List<ViewComponentState> viewComponentStates = new ArrayList<ViewComponentState>();
     private String pendingAlarmsContent;
     private List<CustomComponentState> customViewStates = new ArrayList<CustomComponentState>();
+    private boolean inhibitEmailEventHandlers;
 
     public WatchListState getWatchListState(String id) {
         return (WatchListState) getBasePointState(id, watchListStates);
@@ -123,6 +124,14 @@ public class LongPollState implements Serializable {
         this.customViewStates = customViewStates;
     }
 
+    public void setInhibitEmailEventHandlers(boolean inhibitEmailEventHandlers) {
+    	this.inhibitEmailEventHandlers = inhibitEmailEventHandlers;
+    }
+
+    public boolean getInhibitEmailEventHandlers() {
+    	return inhibitEmailEventHandlers;
+    }    
+    
     /**
      * @param out
      *            required by the serialization API.

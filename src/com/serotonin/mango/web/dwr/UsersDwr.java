@@ -34,6 +34,7 @@ import com.serotonin.mango.db.dao.DataPointDao;
 import com.serotonin.mango.db.dao.DataSourceDao;
 import com.serotonin.mango.db.dao.UserDao;
 import com.serotonin.mango.rt.maint.work.EmailWorkItem;
+import com.serotonin.mango.rt.maint.work.SMSWorkItem;
 import com.serotonin.mango.util.freemarker.MangoEmailContent;
 import com.serotonin.mango.util.freemarker.MessageFormatDirective;
 import com.serotonin.mango.vo.DataPointNameComparator;
@@ -216,4 +217,15 @@ public class UsersDwr extends BaseDwr {
 
         return response;
     }
+    
+    public Map<String, Object> sendTestSms(String phoneNumber, String username, String messageBody) {
+    	Map<String, Object> result = new HashMap<String, Object>();
+    	try {
+    		SMSWorkItem.queueSMS(phoneNumber, messageBody);
+    		result.put("phone", phoneNumber);
+    	} catch (Exception e) {
+    		result.put("exception", e.getMessage());
+    	}
+    	return result;
+    }    
 }

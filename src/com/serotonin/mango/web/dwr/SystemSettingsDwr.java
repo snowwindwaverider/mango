@@ -69,6 +69,19 @@ public class SystemSettingsDwr extends BaseDwr {
         settings.put(SystemSettingsDao.EMAIL_TLS, systemSettingsDao.getBooleanValue(SystemSettingsDao.EMAIL_TLS));
         settings.put(SystemSettingsDao.EMAIL_CONTENT_TYPE,
                 systemSettingsDao.getIntValue(SystemSettingsDao.EMAIL_CONTENT_TYPE));
+        
+        // Sms
+        settings.put(SystemSettingsDao.SMS_USERNAME,
+        		systemSettingsDao.getValue(SystemSettingsDao.SMS_USERNAME));
+        settings.put(SystemSettingsDao.SMS_PASSWORD,
+        		systemSettingsDao.getValue(SystemSettingsDao.SMS_PASSWORD));
+        settings.put(SystemSettingsDao.SMS_ALARM_LEVEL,
+        		systemSettingsDao.getIntValue(SystemSettingsDao.SMS_ALARM_LEVEL));
+        settings.put(SystemSettingsDao.INSTANCE_NAME,
+        		systemSettingsDao.getValue(SystemSettingsDao.INSTANCE_NAME));
+        settings.put(SystemSettingsDao.EMAIL_EVENT_HANDLERS_DISABLED,
+        		systemSettingsDao.getBooleanValue(SystemSettingsDao.EMAIL_EVENT_HANDLERS_DISABLED));        
+        
 
         // System event types
         settings.put("systemEventTypes", SystemEventType.getSystemEventTypes());
@@ -171,6 +184,16 @@ public class SystemSettingsDwr extends BaseDwr {
         systemSettingsDao.setIntValue(SystemSettingsDao.EMAIL_CONTENT_TYPE, contentType);
     }
 
+    @MethodFilter
+    public void saveSmsSettings(String username, String password, int alarmLevel, String instanceName, boolean emailEventsEnabled) {
+    	SystemSettingsDao systemSettingsDao = new SystemSettingsDao();
+    	systemSettingsDao.setValue(SystemSettingsDao.SMS_USERNAME, username);
+    	systemSettingsDao.setValue(SystemSettingsDao.SMS_PASSWORD, password);
+    	systemSettingsDao.setIntValue(SystemSettingsDao.SMS_ALARM_LEVEL, alarmLevel);
+    	systemSettingsDao.setValue(SystemSettingsDao.INSTANCE_NAME, instanceName);
+    	systemSettingsDao.setBooleanValue(SystemSettingsDao.EMAIL_EVENT_HANDLERS_DISABLED, emailEventsEnabled);  
+    }
+    
     @MethodFilter
     public Map<String, Object> sendTestEmail(String host, int port, String from, String name, boolean auth,
             String username, String password, boolean tls, int contentType) {
