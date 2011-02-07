@@ -53,4 +53,8 @@ public class SmsVO {
 	public void setTemplateFile(String tplFile) {
 		this.tplFile = tplFile;
 	}
+	
+	public String getId() {
+		return "SmsJob-" + phoneNumber + "-" + tplFile;
+	}		
 }

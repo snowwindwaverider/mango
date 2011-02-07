@@ -234,11 +234,13 @@ public class EmailHandlerRT extends EventHandlerRT implements ModelTimeoutClient
     		return;    	
 
         for (String number : phoneNumbers) {
+        	SmsJob.scheduleSmsJob(number, tplFile, evt);
+        	/*
         	if (SmsJob.exists(number, tplFile)) {
         		SmsJob.addEvent(number, tplFile, evt);
         	} else {
         		SmsJob.create(number, tplFile, evt);
-        	}
+        	}*/
         }
         
     }     

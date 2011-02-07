@@ -1,45 +1,107 @@
 package com.serotonin.mango.rt.event.handlers;
 
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.jfree.util.Log;
-import org.quartz.Job;
-import org.quartz.JobDetail;
-import org.quartz.JobExecutionContext;
-import org.quartz.JobExecutionException;
-import org.quartz.Scheduler;
-import org.quartz.SchedulerException;
-import org.quartz.SimpleTrigger;
-import org.quartz.Trigger;
+
+import com.serotonin.ShouldNeverHappenException;
+import com.serotonin.timer.FixedDelayTrigger;
+import com.serotonin.timer.TimerTask;
+import com.serotonin.timer.TimerTrigger;
 
 import com.serotonin.mango.Common;
 import com.serotonin.mango.rt.event.EventInstance;
+import com.serotonin.mango.rt.maint.work.ReportWorkItem;
 import com.serotonin.mango.rt.maint.work.SMSWorkItem;
 import com.serotonin.mango.vo.SmsVO;
+import com.serotonin.mango.vo.report.ReportJob;
+import com.serotonin.mango.vo.report.ReportVO;
 
 /*
  * modeled on ReportJob.java. Schedules SMS alarms, aggregates multiple events into a single SMS message,
- * only includes active and unacknowledged events in SMS
+ * only includes active and unacknowledged events in SMS.
  */
-public class SmsJob implements Job {
+public class SmsJob extends TimerTask {
 
+	private static final Map<String, SmsJob> JOB_REGISTRY = new HashMap<String, SmsJob>();
+	
+	   public static void scheduleSmsJob(String phoneNumber, String tplFile, EventInstance evt) {
+		   // all sms messages sent with fixed time delay for now.
+		   // feature req: send most critical SMS immediately 
+		   FixedDelayTrigger trigger = new FixedDelayTrigger(new Date(),120 * 1000);
+		   
+	        synchronized (JOB_REGISTRY) {
+	        	// if there is an existing job then add this alarm to the job.
+	        	SmsVO sms = new SmsVO(phoneNumber, tplFile);
+	        	SmsJob smsJob = new SmsJob(trigger, sms);
+        	
+	        	if (JOB_REGISTRY.containsKey(sms.getId())) {	
+	        		// job already existed. retrieve old job, smsVO and trigger.
+	       		 	smsJob = JOB_REGISTRY.get(sms.getId());
+	       		 	sms = smsJob.sms;
+	       		 	trigger = (FixedDelayTrigger)smsJob.trigger;
+	        	}
+	        	
+	        	// add the event to the SMS object
+	        	sms.addEvent(evt);
+	        	
+	        	// re-schedule the event
+                JOB_REGISTRY.put(sms.getId(), smsJob);
+                Common.timer.schedule(smsJob);
+	        }
+	    }
+	    
+	   
+	   private SmsVO sms;
+	   private TimerTrigger trigger;
+	   
+	    private SmsJob(TimerTrigger trigger, SmsVO sms) {
+	        super(trigger);
+	        this.sms = sms;
+	        this.trigger = trigger;
+	    }
+	   
+	    @Override
+	    public void run(long runtime) {	
+			ArrayList<EventInstance> aggregatedEvents = sms.getEvents();
+			ArrayList<EventInstance> activeEvents = new ArrayList<EventInstance>();
+			
+			// if event has been acknowledged or become inactive then don't include it 
+			// in the list of events in the SMS message
+			for (EventInstance evt: aggregatedEvents) {
+				if (! evt.isAcknowledged() && evt.isActive()) 
+					activeEvents.add(evt);
+			}
+			
+			// Are there any events that were still active and unacknowledged?
+			if (!activeEvents.isEmpty()) {
+				sms.setEvents(activeEvents);
+				SMSWorkItem.queueSMS(sms);
+			}	    	
+	    }
+	
+
+		public static boolean exists(String phoneNumber, String tplFile) {
+			SmsVO exists_sms = new SmsVO(phoneNumber, tplFile);
+			synchronized (JOB_REGISTRY) {
+				if (JOB_REGISTRY.containsKey(exists_sms.getId())) {
+					return true;
+				}
+			}
+			return false;
+		}
+	    
+}
+	/*
 	private final static String SMS_GROUP = "SMS";
 	private final static String SMS_VO_KEY = "SMS_VO_KEY";
 
-	public static boolean exists(String phoneNumber, String tplFile) {
-		String jobName = getJobName(phoneNumber, tplFile);
-		
-		try {
-			JobDetail jobDetail = Common.ctx.getScheduler().getJobDetail(jobName, SMS_GROUP);
-			if (jobDetail != null) 
-				return true;
-		} catch (SchedulerException e) {
-			return false;
-		}
-		return false;
-	}
+
 	
 	@SuppressWarnings("unchecked")
 	public static boolean addEvent(String phoneNumber, String tplFile, EventInstance evt) {
@@ -89,9 +151,7 @@ public class SmsJob implements Job {
 		return (SmsVO)jobDetail.getJobDataMap().get(SMS_VO_KEY);
 	}
 
-	private static String getJobName(String phoneNumber, String tplFile) {
-		return "SmsJob-" + phoneNumber + "-" + tplFile;
-	}
+
 	
 	private static boolean scheduleJob(JobDetail jobDetail, Trigger trigger) {
 		Scheduler sched = Common.ctx.getScheduler();
@@ -123,5 +183,5 @@ public class SmsJob implements Job {
 				SMSWorkItem.queueSMS(smsVO);
 			}
 	}
+*/
 
-}

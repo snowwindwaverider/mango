@@ -1,15 +1,19 @@
 package com.serotonin.mango.rt.maint.work;
 
 import java.io.IOException;
+import java.io.StringWriter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
 import org.jfree.util.Log;
+
+import com.serotonin.ShouldNeverHappenException;
 import com.serotonin.mango.Common;
 import com.serotonin.mango.db.dao.SystemSettingsDao;
 import com.serotonin.mango.rt.event.EventInstance;
 import com.serotonin.mango.rt.event.type.SystemEventType;
+import com.serotonin.mango.util.freemarker.MangoEmailContent;
 import com.serotonin.mango.util.freemarker.MessageFormatDirective;
 import com.serotonin.mango.vo.SmsVO;
 import com.serotonin.web.email.EmailContent;
@@ -70,16 +74,22 @@ public class SMSWorkItem implements WorkItem {
 
 		       model.put("events", smsVO.getEvents());
 		       model.put("fmt", new MessageFormatDirective(bundle));
-		       EmailContent content = new EmailContent(tpl, model);
-		       messageContent = content.getHtmlContent();            
+		        // Create the content from the template.
+		        StringWriter writer = new StringWriter();
+		        try {
+		            tpl.process(model, writer);
+		        }
+		        catch (Exception e) {
+		            // Couldn't process the template?
+		            throw new ShouldNeverHappenException(e);
+		        }
+		        // Save the content
+		        messageContent = writer.toString();		       
 		      
 		    } catch (IOException e) {
 			   Log.error("IOException sending SMS", e);
 			   return;
-		    } catch (TemplateException e) {
-			   Log.error("Template exception sending SMS", e);
-			   return;
-		    }	   
+		    }    
 	    } else {
 	    	// a string was passed (from user page?) instead of a list of events. make this the content.
 	    	messageContent = smsVO.getMessage();
@@ -89,8 +99,7 @@ public class SMSWorkItem implements WorkItem {
 	    // and replace with literal \n 56 CE
 	    String escapedMessage = messageContent.replaceAll("\r\n", "\n");
 	    escapedMessage = escapedMessage.replaceAll("\n", "\\\\n");
-	    
-	    
+	       
 	    SmsInterface smsInterface = new SmsInterface(1);
 	    
 	   short validityPeriod = ValidityPeriod.DEFAULT;
