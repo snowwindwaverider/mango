@@ -99,7 +99,7 @@ public class EmailHandlerRT extends EventHandlerRT implements ModelTimeoutClient
 
         Set<String> phoneNumbers = new MailingListDao().getRecipientPhoneNumbers(vo.getActiveRecipients(), 
         		new DateTime(evt.getActiveTimestamp()));
-        sendSms("event/smsActive.ftl", evt, phoneNumbers);
+        sendSms("smsActive.ftl", evt, phoneNumbers);
         
         // If an inactive notification is to be sent, save the active recipients.
         if (vo.isSendInactive()) {
@@ -134,7 +134,7 @@ public class EmailHandlerRT extends EventHandlerRT implements ModelTimeoutClient
 
         Set<String> phoneNumbers = new MailingListDao().getRecipientPhoneNumbers(vo.getEscalationRecipients(), 
         		new DateTime(fireTime));
-        sendSms("event/smsEscalation.ftl", evt, phoneNumbers);         
+        sendSms("SmsEscalation.ftl", evt, phoneNumbers);         
         
         // If an inactive notification is to be sent, save the escalation recipients, but only if inactive recipients
         // have not been overridden.
@@ -153,7 +153,7 @@ public class EmailHandlerRT extends EventHandlerRT implements ModelTimeoutClient
         if (inactiveRecipients != null && inactiveRecipients.size() > 0) {
             // Send an email to the inactive recipients.
             sendEmail(evt, NotificationType.INACTIVE, inactiveRecipients);
-            sendSms("event/smsInactive.ftl", evt, inactivePhoneNumbers);
+            sendSms("smsInactive.ftl", evt, inactivePhoneNumbers);
         }
         
        
@@ -235,13 +235,6 @@ public class EmailHandlerRT extends EventHandlerRT implements ModelTimeoutClient
 
         for (String number : phoneNumbers) {
         	SmsJob.scheduleSmsJob(number, tplFile, evt);
-        	/*
-        	if (SmsJob.exists(number, tplFile)) {
-        		SmsJob.addEvent(number, tplFile, evt);
-        	} else {
-        		SmsJob.create(number, tplFile, evt);
-        	}*/
         }
-        
     }     
 }
