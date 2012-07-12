@@ -25,6 +25,7 @@ import com.serotonin.db.KeyValuePair;
 import com.serotonin.mango.Common;
 import com.serotonin.mango.DataTypes;
 import com.serotonin.mango.db.dao.DataPointDao;
+import com.serotonin.mango.rt.publish.persistent.PersistentSenderRT;
 import com.serotonin.mango.vo.DataPointExtendedNameComparator;
 import com.serotonin.mango.vo.DataPointVO;
 import com.serotonin.mango.vo.publish.PublishedPointVO;
@@ -37,6 +38,7 @@ import com.serotonin.mango.vo.publish.persistent.PersistentPointVO;
 import com.serotonin.mango.vo.publish.persistent.PersistentSenderVO;
 import com.serotonin.mango.web.dwr.beans.HttpSenderTester;
 import com.serotonin.web.dwr.DwrResponseI18n;
+import com.serotonin.web.i18n.LocalizableMessage;
 
 /**
  * @author Matthew Lohbihler
@@ -59,7 +61,7 @@ public class PublisherEditDwr extends BaseDwr {
     }
 
     public DwrResponseI18n initSender() {
-        List<DataPointVO> allPoints = new DataPointDao().getDataPoints(DataPointExtendedNameComparator.instance);
+        List<DataPointVO> allPoints = new DataPointDao().getDataPoints(DataPointExtendedNameComparator.instance, false);
 
         // Remove image points
         Iterator<DataPointVO> iter = allPoints.iterator();
@@ -76,9 +78,8 @@ public class PublisherEditDwr extends BaseDwr {
     }
 
     //
-    // /
-    // / HTTP sender stuff
-    // /
+    //
+    // HTTP sender stuff
     //
     public DwrResponseI18n saveHttpSender(String name, String xid, boolean enabled, List<HttpPointVO> points,
             String url, boolean usePost, List<KeyValuePair> staticHeaders, List<KeyValuePair> staticParameters,
@@ -118,9 +119,8 @@ public class PublisherEditDwr extends BaseDwr {
     }
 
     //
-    // /
-    // / Pachube sender stuff
-    // /
+    //
+    // Pachube sender stuff
     //
     public DwrResponseI18n savePachubeSender(String name, String xid, boolean enabled, List<PachubePointVO> points,
             String apiKey, int timeoutSeconds, int retries, int cacheWarningSize, boolean changesOnly,
@@ -144,13 +144,12 @@ public class PublisherEditDwr extends BaseDwr {
     }
 
     //
-    // /
-    // / Persistent sender stuff
-    // /
+    //
+    // Persistent sender stuff
     //
     public DwrResponseI18n savePersistentSender(String name, String xid, boolean enabled,
-            List<PersistentPointVO> points, String host, int port, String authorizationKey, int syncType,
-            int cacheWarningSize, boolean changesOnly, boolean sendSnapshot, int snapshotSendPeriods,
+            List<PersistentPointVO> points, String host, int port, String authorizationKey, String xidPrefix,
+            int syncType, int cacheWarningSize, boolean changesOnly, boolean sendSnapshot, int snapshotSendPeriods,
             int snapshotSendPeriodType) {
         PersistentSenderVO p = (PersistentSenderVO) Common.getUser().getEditPublisher();
 
@@ -161,6 +160,7 @@ public class PublisherEditDwr extends BaseDwr {
         p.setHost(host);
         p.setPort(port);
         p.setAuthorizationKey(authorizationKey);
+        p.setXidPrefix(xidPrefix);
         p.setSyncType(syncType);
         p.setCacheWarningSize(cacheWarningSize);
         p.setChangesOnly(changesOnly);
@@ -169,5 +169,52 @@ public class PublisherEditDwr extends BaseDwr {
         p.setSnapshotSendPeriodType(snapshotSendPeriodType);
 
         return trySave(p);
+    }
+
+    public DwrResponseI18n getPersistentSenderStatus() {
+        PersistentSenderVO p = (PersistentSenderVO) Common.getUser().getEditPublisher();
+        PersistentSenderRT rt = (PersistentSenderRT) Common.ctx.getRuntimeManager().getRunningPublisher(p.getId());
+
+        DwrResponseI18n response = new DwrResponseI18n();
+        if (rt == null)
+            response.addGenericMessage("publisherEdit.persistent.status.notEnabled");
+        else {
+            response.addGenericMessage("publisherEdit.persistent.status.pointCount", rt.getPointCount());
+            response.addGenericMessage("publisherEdit.persistent.status.queueSize", rt.getQueueSize());
+            if (rt.getConnectingIndex() != -1)
+                response.addGenericMessage("publisherEdit.persistent.status.connectionState", new LocalizableMessage(
+                        "publisherEdit.persistent.status.connecting", rt.getConnectingIndex(), rt.getPointCount()));
+            else if (rt.isConnected())
+                response.addGenericMessage("publisherEdit.persistent.status.connectionState", new LocalizableMessage(
+                        "publisherEdit.persistent.status.connected"));
+            else
+                response.addGenericMessage("publisherEdit.persistent.status.connectionState", new LocalizableMessage(
+                        "publisherEdit.persistent.status.notConnected"));
+            response.addGenericMessage("publisherEdit.persistent.status.packetQueueSize", rt.getPacketsToSend());
+
+            int syncStatus = rt.getSyncStatus();
+            if (syncStatus == -1)
+                response.addGenericMessage("publisherEdit.persistent.status.syncNotRunning");
+            else
+                response.addGenericMessage("publisherEdit.persistent.status.syncStatus", syncStatus,
+                        rt.getPointCount(), rt.getSyncRequestsSent());
+        }
+
+        return response;
+    }
+
+    public DwrResponseI18n startPersistentSync() {
+        PersistentSenderVO p = (PersistentSenderVO) Common.getUser().getEditPublisher();
+        PersistentSenderRT rt = (PersistentSenderRT) Common.ctx.getRuntimeManager().getRunningPublisher(p.getId());
+
+        DwrResponseI18n response = new DwrResponseI18n();
+        if (rt == null)
+            response.addGenericMessage("publisherEdit.persistent.status.notEnabled");
+        else if (rt.startSync())
+            response.addGenericMessage("publisherEdit.persistent.syncStarted");
+        else
+            response.addGenericMessage("publisherEdit.persistent.syncNotStarted");
+
+        return response;
     }
 }

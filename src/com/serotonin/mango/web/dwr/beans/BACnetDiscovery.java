@@ -36,6 +36,7 @@ import com.serotonin.bacnet4j.exception.BACnetException;
 import com.serotonin.bacnet4j.exception.PropertyValueException;
 import com.serotonin.bacnet4j.obj.ObjectCovSubscription;
 import com.serotonin.bacnet4j.service.unconfirmed.WhoIsRequest;
+import com.serotonin.bacnet4j.type.Encodable;
 import com.serotonin.bacnet4j.type.constructed.ObjectPropertyReference;
 import com.serotonin.bacnet4j.type.constructed.SequenceOf;
 import com.serotonin.bacnet4j.type.enumerated.ObjectType;
@@ -282,10 +283,14 @@ public class BACnetDiscovery extends DefaultDeviceEventListener implements Testi
                 bean.setPresentValue(values.getString(oid, pid));
             else if (pid.equals(PropertyIdentifier.units))
                 bean.getUnitsDescription().add(values.getString(oid, pid));
-            else if (pid.equals(PropertyIdentifier.inactiveText))
-                bean.getUnitsDescription().set(0, values.getString(oid, pid));
-            else if (pid.equals(PropertyIdentifier.activeText))
-                bean.getUnitsDescription().set(1, values.getString(oid, pid));
+            else if (pid.equals(PropertyIdentifier.inactiveText)) {
+                Encodable e = values.getNullOnError(oid, pid);
+                bean.getUnitsDescription().set(0, e == null ? "0" : e.toString());
+            }
+            else if (pid.equals(PropertyIdentifier.activeText)) {
+                Encodable e = values.getNullOnError(oid, pid);
+                bean.getUnitsDescription().set(1, e == null ? "1" : e.toString());
+            }
             else if (pid.equals(PropertyIdentifier.outputUnits))
                 bean.getUnitsDescription().add(values.getString(oid, pid));
             else if (pid.equals(PropertyIdentifier.stateText)) {

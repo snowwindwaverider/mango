@@ -133,6 +133,7 @@
   <item id="reportTemplates">
     <relation id="cronPatterns"/>
     <relation id="reportInstances"/>
+    <relation id="colours"/>
   </item>
   
   <item id="1wirePP"/>
@@ -190,7 +191,9 @@
     <relation id="textRenderers"/>
   </item>
   
-  <item id="dataPointEditing"/>
+  <item id="dataPointEditing">
+    <relation id="colours"/>
+  </item>
   
   <item id="numberFormats">
     <relation id="textRenderers"/>
@@ -324,5 +327,27 @@
   <item id="maintenanceEvents">
     <relation id="cronPatterns"/>
     <relation id="eventDetectors"/>
+  </item>
+  
+  <item id="colourSettings">
+    <relation id="colours"/>
+  </item>
+  
+  <item id="colours"/>
+  
+  <item id="jmxDS">
+    <relation id="jmxPP"/>
+  </item>
+  
+  <item id="jmxPP">
+    <relation id="jmxDS"/>
+  </item>
+  
+  <item id="internalDS">
+    <relation id="internalPP"/>
+  </item>
+  
+  <item id="internalPP">
+    <relation id="internalDS"/>
   </item>
 </doxManifest>

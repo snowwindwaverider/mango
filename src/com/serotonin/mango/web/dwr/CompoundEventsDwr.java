@@ -61,7 +61,7 @@ public class CompoundEventsDwr extends BaseDwr {
         // Get the data points
         List<EventSourceBean> dataPoints = new LinkedList<EventSourceBean>();
         EventSourceBean source;
-        for (DataPointVO dp : new DataPointDao().getDataPoints(DataPointExtendedNameComparator.instance)) {
+        for (DataPointVO dp : new DataPointDao().getDataPoints(DataPointExtendedNameComparator.instance, true)) {
             if (!Permissions.hasDataSourcePermission(user, dp.getDataSourceId()))
                 continue;
 

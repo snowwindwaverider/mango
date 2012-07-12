@@ -70,6 +70,6 @@ public class Upgrade1_6_4 extends DBUpgrade {
 
     "create table pointLinks (", "  id int not null auto_increment,", "  xid varchar(20) not null,",
             "  sourcePointId int not null,", "  targetPointId int not null,", "  script longtext,",
-            "  eventType int not null,", "  disabled char(1) not null,", "  primary key (id)", ") type=InnoDB;",
+            "  eventType int not null,", "  disabled char(1) not null,", "  primary key (id)", ") engine=InnoDB;",
             "alter table pointLinks add constraint pointLinksUn1 unique (xid);", };
 }

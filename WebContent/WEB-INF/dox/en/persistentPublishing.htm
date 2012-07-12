@@ -18,5 +18,40 @@
  -->
 <h1>Overview</h1>
 <p>
-  TODO
+  The persistent TCP publisher is a highly efficient way of sending data from one Mango instance to another. It is used 
+  to publish point updates, but will also automatically create and synchronize point information on the remote instance.
+  Typically, remote instances will publish to a central persistent TCP data source, but other topologies are also 
+  possible.
+</p>
+
+<h1>Configuration</h1>
+<p>
+  The <b>Host</b> is the domain name or IP address of the remote system upon which there is a listening Persistent TCP
+  data source listening. The <b>Port</b> is the port number at which that data source is configured to listen. The 
+  <b>Authorization key</b> is the shared secret key required to have the connection request accepted.
+</p>
+<p>
+  The <b>XID prefix</b> is a prefix for data point XID values such that they remain unique on the remote instance. For
+  example, if there were two field systems with similar configurations publishing to a single central instance, data
+  point XID collisions may result if the same XID values are used in the field systems. By providing a different prefix
+  value in the field systems, the XIDs at the central instance can be guaranteed to be unique. Note that XID length
+  constraints apply. XIDs have a maximum length of 50 characters, so if the XID in the field system has a length of, 
+  say, 40 characters, the prefix can be no longer than 10 characters.
+</p>
+<p>
+  Persistent publisher and data source combinations can be configured to synchronize their historical data by choosing 
+  an appropriate value in the <b>Synchronize historical data</b> select. If, for example, the publisher is temporarily
+  disabled and restarted, any data generated during the period in which it was inactive will be missing at the data
+  source instance. Synchronization attempts to fill in gaps by using a "binary search"-type algorithm to find them.
+</p>
+
+<h1>Notes</h1>
+<p>
+  Published points are automatically created in the remote system using most of the properties of the point in the 
+  field system. (Some properties are not appropriate for replication.) Changes to point properties are sent to the
+  remote system for replication, although the remote system may not accept the changes if it is not configured to do so.
+</p>
+<p>
+  If synchronization of historical data is enabled, additional point history should not be added to the point at the
+  data source side since this will cause problems in the algorithm that searches for data gaps.
 </p>

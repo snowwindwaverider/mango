@@ -19,7 +19,9 @@
 package com.serotonin.mango.web.dwr;
 
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
+import java.net.MalformedURLException;
 import java.nio.charset.IllegalCharsetNameException;
 import java.text.DateFormat;
 import java.text.DecimalFormat;
@@ -29,8 +31,17 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.regex.Pattern;
 
+import javax.management.MBeanAttributeInfo;
+import javax.management.MBeanServerConnection;
+import javax.management.ObjectName;
+import javax.management.RuntimeMBeanException;
+import javax.management.openmbean.CompositeData;
+import javax.management.remote.JMXConnector;
+import javax.management.remote.JMXConnectorFactory;
+import javax.management.remote.JMXServiceURL;
 import javax.script.ScriptException;
 
 import net.sf.mbus4j.dataframes.MBusResponseFramesContainer;
@@ -58,13 +69,17 @@ import com.serotonin.bacnet4j.RemoteDevice;
 import com.serotonin.bacnet4j.type.constructed.Address;
 import com.serotonin.bacnet4j.type.enumerated.PropertyIdentifier;
 import com.serotonin.db.IntValuePair;
+import com.serotonin.db.MappedRowCallback;
 import com.serotonin.io.StreamUtils;
 import com.serotonin.io.serial.SerialParameters;
 import com.serotonin.mango.Common;
 import com.serotonin.mango.DataTypes;
 import com.serotonin.mango.db.dao.DataPointDao;
 import com.serotonin.mango.db.dao.EventDao;
+import com.serotonin.mango.db.dao.PointValueDao;
+import com.serotonin.mango.rt.dataImage.DataPointRT;
 import com.serotonin.mango.rt.dataImage.IDataPoint;
+import com.serotonin.mango.rt.dataImage.IdPointValueTime;
 import com.serotonin.mango.rt.dataImage.PointValueTime;
 import com.serotonin.mango.rt.dataImage.types.MangoValue;
 import com.serotonin.mango.rt.dataSource.DataSourceUtils;
@@ -73,6 +88,8 @@ import com.serotonin.mango.rt.dataSource.http.HttpReceiverData;
 import com.serotonin.mango.rt.dataSource.http.HttpRetrieverDataSourceRT;
 import com.serotonin.mango.rt.dataSource.mbus.MBusConnectionType;
 import com.serotonin.mango.rt.dataSource.meta.DataPointStateException;
+import com.serotonin.mango.rt.dataSource.meta.HistoricalMetaPointLocatorRT;
+import com.serotonin.mango.rt.dataSource.meta.MetaPointExecutionException;
 import com.serotonin.mango.rt.dataSource.meta.ResultTypeException;
 import com.serotonin.mango.rt.dataSource.meta.ScriptExecutor;
 import com.serotonin.mango.rt.dataSource.modbus.ModbusDataSource;
@@ -82,9 +99,11 @@ import com.serotonin.mango.rt.dataSource.onewire.OneWireContainerInfo;
 import com.serotonin.mango.rt.dataSource.onewire.OneWireDataSourceRT;
 import com.serotonin.mango.rt.dataSource.pachube.PachubeDataSourceRT;
 import com.serotonin.mango.rt.dataSource.pachube.PachubeValue;
+import com.serotonin.mango.rt.dataSource.persistent.PersistentDataSourceRT;
 import com.serotonin.mango.rt.dataSource.snmp.Version;
 import com.serotonin.mango.rt.dataSource.viconics.ViconicsDataSourceRT;
 import com.serotonin.mango.rt.event.EventInstance;
+import com.serotonin.mango.util.DateUtils;
 import com.serotonin.mango.util.IntMessagePair;
 import com.serotonin.mango.vo.DataPointNameComparator;
 import com.serotonin.mango.vo.DataPointVO;
@@ -103,6 +122,10 @@ import com.serotonin.mango.vo.dataSource.http.HttpReceiverDataSourceVO;
 import com.serotonin.mango.vo.dataSource.http.HttpReceiverPointLocatorVO;
 import com.serotonin.mango.vo.dataSource.http.HttpRetrieverDataSourceVO;
 import com.serotonin.mango.vo.dataSource.http.HttpRetrieverPointLocatorVO;
+import com.serotonin.mango.vo.dataSource.internal.InternalDataSourceVO;
+import com.serotonin.mango.vo.dataSource.internal.InternalPointLocatorVO;
+import com.serotonin.mango.vo.dataSource.jmx.JmxDataSourceVO;
+import com.serotonin.mango.vo.dataSource.jmx.JmxPointLocatorVO;
 import com.serotonin.mango.vo.dataSource.mbus.MBusDataSourceVO;
 import com.serotonin.mango.vo.dataSource.mbus.MBusPointLocatorVO;
 import com.serotonin.mango.vo.dataSource.meta.MetaDataSourceVO;
@@ -168,7 +191,9 @@ import com.serotonin.modbus4j.ip.IpParameters;
 import com.serotonin.modbus4j.locator.BaseLocator;
 import com.serotonin.modbus4j.msg.ModbusRequest;
 import com.serotonin.modbus4j.msg.ReadResponse;
+import com.serotonin.timer.SimulationTimer;
 import com.serotonin.util.IpAddressUtils;
+import com.serotonin.util.NumberUtils;
 import com.serotonin.util.StringUtils;
 import com.serotonin.viconics.RequestFailureException;
 import com.serotonin.viconics.ViconicsDevice;
@@ -1005,6 +1030,71 @@ public class DataSourceEditDwr extends DataSourceListDwr {
         }
 
         return response;
+    }
+
+    @MethodFilter
+    public LocalizableMessage generateMetaPointHistory(int pointId) {
+        DataPointDao dataPointDao = new DataPointDao();
+        PointValueDao pointValueDao = new PointValueDao();
+        DataPointVO pvo = dataPointDao.getDataPoint(pointId);
+
+        Permissions.ensureDataSourcePermission(Common.getUser(), pvo.getDataSourceId());
+
+        pvo.getEventDetectors().clear();
+        MetaPointLocatorVO plvo = pvo.getPointLocator();
+        final HistoricalMetaPointLocatorRT plrt = new HistoricalMetaPointLocatorRT(plvo);
+        final SimulationTimer simTimer = new SimulationTimer();
+        DataPointRT prt = new DataPointRT(pvo, plrt);
+        prt.initializeHistorical();
+
+        try {
+            // Get the most recent inception date of the context points. This will be the "from" of the history range.
+            long from = 0;
+            List<Integer> dataPointIds = new ArrayList<Integer>();
+            for (IntValuePair ivp : plvo.getContext()) {
+                long incep = pointValueDao.getInceptionDate(ivp.getKey());
+                if (incep == -1) {
+                    DataPointVO cvo = dataPointDao.getDataPoint(ivp.getKey());
+                    return new LocalizableMessage("dsEdit.meta.generate.noData", cvo.getName());
+                }
+                if (from < incep)
+                    from = incep;
+                dataPointIds.add(ivp.getKey());
+            }
+
+            // Get the inception date target point. This will be the "to" of the history range.
+            long to = pointValueDao.getInceptionDate(pointId);
+            if (to == -1)
+                to = System.currentTimeMillis();
+
+            simTimer.fastForwardTo(from);
+
+            try {
+                plrt.initialize(simTimer, prt);
+                pointValueDao.getPointValuesBetween(dataPointIds, from, to, new MappedRowCallback<IdPointValueTime>() {
+                    public void row(IdPointValueTime ipvt, int index) {
+                        simTimer.fastForwardTo(ipvt.getTime());
+                        plrt.pointUpdated(ipvt);
+                    }
+                });
+                simTimer.fastForwardTo(to);
+                plrt.terminate();
+            }
+            catch (MetaPointExecutionException e) {
+                return new LocalizableMessage("dsEdit.meta.generate.error", e.getErrorMessage(), plrt.getUpdates());
+            }
+
+            if (plrt.getUpdates() > 0) {
+                DataPointRT activeRT = Common.ctx.getRuntimeManager().getDataPoint(pointId);
+                if (activeRT != null)
+                    activeRT.resetValues();
+            }
+
+            return new LocalizableMessage("dsEdit.meta.generate.success", plrt.getUpdates());
+        }
+        finally {
+            prt.terminateHistorical();
+        }
     }
 
     //
@@ -1980,6 +2070,31 @@ public class DataSourceEditDwr extends DataSourceListDwr {
         return validatePoint(id, xid, name, locator, null);
     }
 
+    @MethodFilter
+    public DwrResponseI18n getPersistentStatus() {
+        PersistentDataSourceVO ds = (PersistentDataSourceVO) Common.getUser().getEditDataSource();
+        PersistentDataSourceRT rt = (PersistentDataSourceRT) Common.ctx.getRuntimeManager().getRunningDataSource(
+                ds.getId());
+
+        DwrResponseI18n response = new DwrResponseI18n();
+        if (rt == null)
+            response.addGenericMessage("dsEdit.persistent.status.notEnabled");
+        else {
+            int conns = rt.getConnectionCount();
+            if (conns == 0)
+                response.addGenericMessage("dsEdit.persistent.status.noConnections");
+            else {
+                long now = System.currentTimeMillis();
+                for (int i = 0; i < conns; i++)
+                    response.addGenericMessage("dsEdit.persistent.status.connection", rt.getConnectionAddress(i),
+                            DateUtils.getDuration(now - rt.getConnectionTime(i)),
+                            NumberUtils.countDescription(rt.getPacketsReceived(i)));
+            }
+        }
+
+        return response;
+    }
+
     //
     //
     // OPC DA stuff
@@ -2081,5 +2196,134 @@ public class DataSourceEditDwr extends DataSourceListDwr {
         }
 
         return response;
+    }
+
+    //
+    //
+    // JMX stuff
+    //
+    @MethodFilter
+    public DwrResponseI18n saveJmxDataSource(String name, String xid, boolean useLocalServer, String remoteServerAddr,
+            int updatePeriodType, int updatePeriods, boolean quantize) {
+        JmxDataSourceVO ds = (JmxDataSourceVO) Common.getUser().getEditDataSource();
+
+        ds.setXid(xid);
+        ds.setName(name);
+        ds.setUseLocalServer(useLocalServer);
+        ds.setRemoteServerAddr(remoteServerAddr);
+        ds.setUpdatePeriodType(updatePeriodType);
+        ds.setUpdatePeriods(updatePeriods);
+        ds.setQuantize(quantize);
+
+        return tryDataSourceSave(ds);
+    }
+
+    @MethodFilter
+    public DwrResponseI18n saveJmxPointLocator(int id, String xid, String name, JmxPointLocatorVO locator) {
+        return validatePoint(id, xid, name, locator, null);
+    }
+
+    @MethodFilter
+    public DwrResponseI18n getJmxObjectNames(boolean useLocalServer, String remoteServerAddr) {
+        DwrResponseI18n response = new DwrResponseI18n();
+        JMXConnector connector = null;
+
+        try {
+            MBeanServerConnection server = null;
+            if (useLocalServer)
+                server = ManagementFactory.getPlatformMBeanServer();
+            else {
+                String url = "service:jmx:rmi:///jndi/rmi://" + remoteServerAddr + "/jmxrmi";
+                try {
+                    connector = JMXConnectorFactory.connect(new JMXServiceURL(url), null);
+                    server = connector.getMBeanServerConnection();
+                }
+                catch (MalformedURLException e) {
+                    response.addGenericMessage("dsEdit.jmx.badUrl", e.getMessage());
+                }
+                catch (IOException e) {
+                    response.addGenericMessage("dsEdit.jmx.connectionError", e.getMessage());
+                }
+            }
+
+            if (!response.getHasMessages()) {
+                try {
+                    Map<String, Object> names = new TreeMap<String, Object>();
+                    response.addData("names", names);
+
+                    for (ObjectName on : server.queryNames(null, null)) {
+                        List<Map<String, Object>> objectAttributesList = new ArrayList<Map<String, Object>>();
+                        names.put(on.getCanonicalName(), objectAttributesList);
+
+                        for (MBeanAttributeInfo attr : server.getMBeanInfo(on).getAttributes()) {
+                            if (attr.getType() == null)
+                                continue;
+
+                            Map<String, Object> objectAttributes = new HashMap<String, Object>();
+                            try {
+                                objectAttributes.put("name", attr.getName());
+                                if (attr.getType().equals("javax.management.openmbean.CompositeData")) {
+                                    objectAttributes.put("type", "Composite");
+                                    CompositeData cd = (CompositeData) server.getAttribute(on, attr.getName());
+                                    if (cd != null) {
+                                        List<Map<String, Object>> compositeItemsList = new ArrayList<Map<String, Object>>();
+                                        objectAttributes.put("items", compositeItemsList);
+                                        for (String key : cd.getCompositeType().keySet()) {
+                                            Map<String, Object> compositeItems = new HashMap<String, Object>();
+                                            compositeItemsList.add(compositeItems);
+                                            compositeItems.put("name", key);
+                                            compositeItems
+                                                    .put("type", cd.getCompositeType().getType(key).getTypeName());
+                                        }
+                                    }
+                                }
+                                else
+                                    objectAttributes.put("type", attr.getType());
+                                objectAttributesList.add(objectAttributes);
+                            }
+                            catch (RuntimeMBeanException e) {
+                                // ignore
+                            }
+                        }
+                    }
+                }
+                catch (Exception e) {
+                    response.addGenericMessage("dsEdit.jmx.readError", e.getMessage());
+                    LOG.warn("", e);
+                }
+            }
+        }
+        finally {
+            try {
+                if (connector != null)
+                    connector.close();
+            }
+            catch (IOException e) {
+                // no op
+            }
+        }
+
+        return response;
+    }
+
+    //
+    //
+    // Internal stuff
+    //
+    @MethodFilter
+    public DwrResponseI18n saveInternalDataSource(String name, String xid, int updatePeriods, int updatePeriodType) {
+        InternalDataSourceVO ds = (InternalDataSourceVO) Common.getUser().getEditDataSource();
+
+        ds.setXid(xid);
+        ds.setName(name);
+        ds.setUpdatePeriods(updatePeriods);
+        ds.setUpdatePeriodType(updatePeriodType);
+
+        return tryDataSourceSave(ds);
+    }
+
+    @MethodFilter
+    public DwrResponseI18n saveInternalPointLocator(int id, String xid, String name, InternalPointLocatorVO locator) {
+        return validatePoint(id, xid, name, locator, null);
     }
 }

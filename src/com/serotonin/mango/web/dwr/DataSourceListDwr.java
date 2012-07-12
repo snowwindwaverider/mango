@@ -44,10 +44,9 @@ public class DataSourceListDwr extends BaseDwr {
 
         if (Common.getUser().isAdmin()) {
             List<IntValuePair> translatedTypes = new ArrayList<IntValuePair>();
-            SystemSettingsDao systemSettingsDao = new SystemSettingsDao();
             for (DataSourceVO.Type type : DataSourceVO.Type.values()) {
                 // Allow customization settings to overwrite the default display value.
-                boolean display = systemSettingsDao.getBooleanValue(type.name()
+                boolean display = SystemSettingsDao.getBooleanValue(type.name()
                         + SystemSettingsDao.DATASOURCE_DISPLAY_SUFFIX, type.isDisplay());
                 if (display)
                     translatedTypes.add(new IntValuePair(type.getId(), getMessage(type.getKey())));

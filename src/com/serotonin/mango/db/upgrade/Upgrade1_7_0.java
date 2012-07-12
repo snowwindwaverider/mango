@@ -112,7 +112,7 @@ public class Upgrade1_7_0 extends DBUpgrade {
             "  typeKey int not null,",//
             "  ts bigint not null,", //
             "  commentText varchar(1024) not null",//
-            ") type=InnoDB;",//
+            ") engine=InnoDB;",//
             "alter table reportInstanceUserComments add constraint reportInstanceUserCommentsFk1",//
             "  foreign key (reportInstanceId) references reportInstances(id) on delete cascade;",//
 

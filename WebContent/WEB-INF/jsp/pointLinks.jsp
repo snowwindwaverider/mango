@@ -50,6 +50,9 @@
         if (editingPointLink)
             stopImageFader($("pl"+ editingPointLink.id +"Img"));
         PointLinksDwr.getPointLink(plId, function(pl) {
+        	if (!pl)
+        		return;
+        	
             if (!editingPointLink)
                 show("pointLinkDetails");
             editingPointLink = pl;
@@ -61,10 +64,10 @@
             $set("event", pl.event);
             $set("disabled", pl.disabled);
             
+            startImageFader($("pl"+ plId +"Img"));
+            display("deletePointLinkImg", plId != ${NEW_ID});
             setUserMessage();
         });
-        startImageFader($("pl"+ plId +"Img"));
-        display("deletePointLinkImg", plId != ${NEW_ID});
     }
     
     function savePointLink() {

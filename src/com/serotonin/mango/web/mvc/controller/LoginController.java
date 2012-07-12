@@ -18,6 +18,8 @@
  */
 package com.serotonin.mango.web.mvc.controller;
 
+import java.util.Map;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -31,6 +33,7 @@ import org.springframework.web.servlet.view.RedirectView;
 import com.serotonin.mango.Common;
 import com.serotonin.mango.db.dao.UserDao;
 import com.serotonin.mango.vo.User;
+import com.serotonin.mango.web.integration.CrowdUtils;
 import com.serotonin.mango.web.mvc.form.LoginForm;
 import com.serotonin.util.StringUtils;
 import com.serotonin.util.ValidationUtils;
@@ -55,6 +58,37 @@ public class LoginController extends SimpleFormController {
     }
 
     @Override
+    protected ModelAndView showForm(HttpServletRequest request, HttpServletResponse response, BindException errors,
+            @SuppressWarnings("rawtypes") Map controlModel) throws Exception {
+        // Check if Crowd is enabled
+        if (CrowdUtils.isCrowdEnabled()) {
+            String username = CrowdUtils.getCrowdUsername(request);
+
+            if (username != null) {
+                ((LoginForm) errors.getTarget()).setUsername(username);
+
+                // The user is logged into Crowd. Make sure the username is valid in this instance.
+                User user = new UserDao().getUser(username);
+                if (user == null)
+                    ValidationUtils.rejectValue(errors, "username", "login.validation.noSuchUser");
+                else {
+                    // Validate some stuff about the user.
+                    if (user.isDisabled())
+                        ValidationUtils.reject(errors, "login.validation.accountDisabled");
+                    else {
+                        if (CrowdUtils.isAuthenticated(request, response)) {
+                            ModelAndView mav = performLogin(request, username);
+                            CrowdUtils.setCrowdAuthenticated(Common.getUser(request));
+                            return mav;
+                        }
+                    }
+                }
+            }
+        }
+        return super.showForm(request, response, errors, controlModel);
+    }
+
+    @Override
     protected void onBindAndValidate(HttpServletRequest request, Object command, BindException errors) {
         LoginForm login = (LoginForm) command;
 
@@ -65,34 +99,57 @@ public class LoginController extends SimpleFormController {
         // Make sure there is a password
         if (StringUtils.isEmpty(login.getPassword()))
             ValidationUtils.rejectValue(errors, "password", "login.validation.noPassword");
-
-        String passwordHash = Common.encrypt(login.getPassword());
-
-        // If there are no errors yet, try validating the username and password.
-        if (errors.getErrorCount() == 0) {
-            User user = new UserDao().getUser(login.getUsername());
-            if (user == null || !passwordHash.equals(user.getPassword()))
-                ValidationUtils.reject(errors, "login.validation.invalidLogin");
-            else if (user.isDisabled())
-                ValidationUtils.reject(errors, "login.validation.accountDisabled");
-        }
     }
 
     @Override
     protected ModelAndView onSubmit(HttpServletRequest request, HttpServletResponse response, Object command,
-            BindException errors) {
+            BindException errors) throws Exception {
         LoginForm login = (LoginForm) command;
 
+        boolean crowdAuthenticated = false;
+
+        // Check if the user exists
+        User user = new UserDao().getUser(login.getUsername());
+        if (user == null)
+            ValidationUtils.rejectValue(errors, "username", "login.validation.noSuchUser");
+        else if (user.isDisabled())
+            ValidationUtils.reject(errors, "login.validation.accountDisabled");
+        else {
+            if (CrowdUtils.isCrowdEnabled())
+                // First attempt authentication with Crowd.
+                crowdAuthenticated = CrowdUtils.authenticate(request, response, login.getUsername(),
+                        login.getPassword());
+
+            if (!crowdAuthenticated) {
+                String passwordHash = Common.encrypt(login.getPassword());
+
+                // Validating the password against the database.
+                if (!passwordHash.equals(user.getPassword()))
+                    ValidationUtils.reject(errors, "login.validation.invalidLogin");
+            }
+        }
+
+        if (errors.hasErrors())
+            return showForm(request, response, errors);
+
+        ModelAndView mav = performLogin(request, login.getUsername());
+        if (crowdAuthenticated)
+            CrowdUtils.setCrowdAuthenticated(Common.getUser(request));
+        return mav;
+    }
+
+    private ModelAndView performLogin(HttpServletRequest request, String username) {
         // Check if the user is already logged in.
         User user = Common.getUser(request);
-        if (user != null && user.getUsername().equals(login.getUsername())) {
+        if (user != null && user.getUsername().equals(username)) {
             // The user is already logged in. Nothing to do.
-            logger.debug("User is already logged in, not relogging in");
+            if (logger.isDebugEnabled())
+                logger.debug("User is already logged in, not relogging in");
         }
         else {
             UserDao userDao = new UserDao();
             // Get the user data from the app server.
-            user = new UserDao().getUser(login.getUsername());
+            user = new UserDao().getUser(username);
 
             // Update the last login time.
             userDao.recordLogin(user.getId());
@@ -100,7 +157,8 @@ public class LoginController extends SimpleFormController {
             // Add the user object to the session. This indicates to the rest
             // of the application whether the user is logged in or not.
             Common.setUser(request, user);
-            logger.debug("User object added to session");
+            if (logger.isDebugEnabled())
+                logger.debug("User object added to session");
         }
 
         if (!mobile) {

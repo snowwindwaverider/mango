@@ -39,14 +39,16 @@ public class ReportChartServlet extends BaseInfoServlet {
         // template. The ReportChartCreator that controlled the generation put the generated image content into the
         // user object, so all i need to do is write that content to the response object.
         User user = Common.getUser(request);
-        Map<String, byte[]> imageData = user.getReportImageData();
-        if (imageData != null) {
-            String path = request.getPathInfo();
+        if (user != null) {
+            Map<String, byte[]> imageData = user.getReportImageData();
+            if (imageData != null) {
+                String path = request.getPathInfo();
 
-            // Path will be of the format "/<chartName>", so we need to ignore the first character.
-            byte[] data = imageData.get(path.substring(1));
-            if (data != null)
-                response.getOutputStream().write(data);
+                // Path will be of the format "/<chartName>", so we need to ignore the first character.
+                byte[] data = imageData.get(path.substring(1));
+                if (data != null)
+                    response.getOutputStream().write(data);
+            }
         }
     }
 }

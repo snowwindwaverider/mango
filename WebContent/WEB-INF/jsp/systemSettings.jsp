@@ -20,7 +20,7 @@
 <%@page import="com.serotonin.mango.Common"%>
 <%@page import="com.serotonin.mango.rt.event.AlarmLevels"%>
 <%@page import="com.serotonin.mango.rt.event.type.EventType"%>
-<%@page import="com.serotonin.mango.util.freemarker.MangoEmailContent"%>
+<%@page import="com.serotonin.mango.web.email.MangoEmailContent"%>
 <%@ include file="/WEB-INF/jsp/include/tech.jsp" %>
 
 <tag:page dwr="SystemSettingsDwr" onload="init">
@@ -100,6 +100,10 @@
               sel.options[sel.options.length] = new Option("${lang.value}", "${lang.key}");
             </c:forEach>
             $set(sel, settings.<c:out value="<%= SystemSettingsDao.LANGUAGE %>"/>);
+            
+            $set("<c:out value="<%= SystemSettingsDao.CHART_BACKGROUND_COLOUR %>"/>", settings.<c:out value="<%= SystemSettingsDao.CHART_BACKGROUND_COLOUR %>"/>);
+            $set("<c:out value="<%= SystemSettingsDao.PLOT_BACKGROUND_COLOUR %>"/>", settings.<c:out value="<%= SystemSettingsDao.PLOT_BACKGROUND_COLOUR %>"/>);
+            $set("<c:out value="<%= SystemSettingsDao.PLOT_GRIDLINE_COLOUR %>"/>", settings.<c:out value="<%= SystemSettingsDao.PLOT_GRIDLINE_COLOUR %>"/>);
         });
     }
     
@@ -262,6 +266,8 @@
     }
     
     function saveMiscSettings() {
+        setUserMessage("miscMessage");
+        startImageFader("saveMiscSettingsImg");
         SystemSettingsDwr.saveMiscSettings(
                 $get("<c:out value="<%= SystemSettingsDao.EVENT_PURGE_PERIOD_TYPE %>"/>"),
                 $get("<c:out value="<%= SystemSettingsDao.EVENT_PURGE_PERIODS %>"/>"),
@@ -274,9 +280,26 @@
                 function() {
                     stopImageFader("saveMiscSettingsImg");
                     setUserMessage("miscMessage", "<fmt:message key="systemSettings.miscSaved"/>");
-                });
-        setUserMessage("miscMessage");
-        startImageFader("saveMiscSettingsImg");
+                }
+        );
+    }
+    
+    function saveColourSettings() {
+        setUserMessage("colourMessage");
+        hideContextualMessages("colourSettingsTab")
+        startImageFader("saveColourSettingsImg");
+        SystemSettingsDwr.saveColourSettings(
+                $get("<c:out value="<%= SystemSettingsDao.CHART_BACKGROUND_COLOUR %>"/>"),
+                $get("<c:out value="<%= SystemSettingsDao.PLOT_BACKGROUND_COLOUR %>"/>"),
+                $get("<c:out value="<%= SystemSettingsDao.PLOT_GRIDLINE_COLOUR %>"/>"),
+                function(response) {
+                    stopImageFader("saveColourSettingsImg");
+                    if (response.hasMessages)
+                        showDwrMessages(response.messages);
+                    else
+                        setUserMessage("colourMessage", "<fmt:message key="systemSettings.coloursSaved"/>");
+                }
+        );
     }
     
     function setUserMessage(type, msg) {
@@ -637,7 +660,7 @@
         </td>
       </tr>
     </table>
-    <table>
+    <table id="miscSettingsTab">
       <tr>
         <td class="formLabelRequired"><fmt:message key="systemSettings.uiPerformance"/></td>
         <td class="formField">
@@ -686,6 +709,37 @@
       </tr>
       <tr>
         <td colspan="2" id="miscMessage" class="formError"></td>
+      </tr>
+    </table>
+  </div>
+  
+  <div class="borderDiv marB marR" style="float:left">
+    <table width="100%">
+      <tr>
+        <td>
+          <span class="smallTitle"><fmt:message key="systemSettings.colourSettings"/></span>
+          <tag:help id="colourSettings"/>
+        </td>
+        <td align="right">
+          <tag:img id="saveColourSettingsImg" png="save" onclick="saveColourSettings();" title="common.save"/>
+        </td>
+      </tr>
+    </table>
+    <table id="colourSettingsTab">
+      <tr>
+        <td class="formLabelRequired"><fmt:message key="systemSettings.chartBackgroundColour"/></td>
+        <td class="formField"><input type="text" id="<c:out value="<%= SystemSettingsDao.CHART_BACKGROUND_COLOUR %>"/>"/></td>
+      </tr>
+      <tr>
+        <td class="formLabelRequired"><fmt:message key="systemSettings.plotBackgroundColour"/></td>
+        <td class="formField"><input type="text" id="<c:out value="<%= SystemSettingsDao.PLOT_BACKGROUND_COLOUR %>"/>"/></td>
+      </tr>
+      <tr>
+        <td class="formLabelRequired"><fmt:message key="systemSettings.plotGridlinesColour"/></td>
+        <td class="formField"><input type="text" id="<c:out value="<%= SystemSettingsDao.PLOT_GRIDLINE_COLOUR %>"/>"/></td>
+      </tr>
+      <tr>
+        <td colspan="2" id="colourMessage" class="formError"></td>
       </tr>
     </table>
   </div>

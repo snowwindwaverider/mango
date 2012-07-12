@@ -44,8 +44,6 @@ import com.serotonin.mango.db.dao.ReportDao;
 import com.serotonin.mango.rt.dataImage.PointValueTime;
 import com.serotonin.mango.rt.dataImage.types.MangoValue;
 import com.serotonin.mango.rt.event.EventInstance;
-import com.serotonin.mango.util.freemarker.MessageFormatDirective;
-import com.serotonin.mango.util.freemarker.UsedImagesDirective;
 import com.serotonin.mango.view.stats.AbstractDataQuantizer;
 import com.serotonin.mango.view.stats.AnalogStatistics;
 import com.serotonin.mango.view.stats.BinaryDataQuantizer;
@@ -58,6 +56,8 @@ import com.serotonin.mango.view.stats.StatisticsGenerator;
 import com.serotonin.mango.view.stats.ValueChangeCounter;
 import com.serotonin.mango.view.text.TextRenderer;
 import com.serotonin.mango.vo.UserComment;
+import com.serotonin.mango.web.email.MessageFormatDirective;
+import com.serotonin.mango.web.email.UsedImagesDirective;
 import com.serotonin.util.ColorUtils;
 import com.serotonin.web.taglib.DateFunctions;
 
@@ -521,7 +521,8 @@ public class ReportChartCreator {
                 numericTimeSeries.setRangeDescription(point.getTextRenderer().getMetaText());
                 point.setNumericTimeSeries(numericTimeSeries);
                 point.setNumericTimeSeriesColor(colour);
-                pointTimeSeriesCollection.addNumericTimeSeries(numericTimeSeries, colour);
+                if (pointInfo.isConsolidatedChart())
+                    pointTimeSeriesCollection.addNumericTimeSeries(numericTimeSeries, colour);
             }
             else if (pointInfo.getDataType() == DataTypes.MULTISTATE) {
                 point.setStats(new StartsAndRuntimeList(pointInfo.getStartValue(), start, end));
@@ -530,7 +531,8 @@ public class ReportChartCreator {
                 discreteTimeSeries = new DiscreteTimeSeries(pointInfo.getExtendedName(), pointInfo.getTextRenderer(),
                         colour);
                 point.setDiscreteTimeSeries(discreteTimeSeries);
-                pointTimeSeriesCollection.addDiscreteTimeSeries(discreteTimeSeries);
+                if (pointInfo.isConsolidatedChart())
+                    pointTimeSeriesCollection.addDiscreteTimeSeries(discreteTimeSeries);
                 numericTimeSeries = null;
             }
             else if (pointInfo.getDataType() == DataTypes.BINARY) {
@@ -540,7 +542,8 @@ public class ReportChartCreator {
                 discreteTimeSeries = new DiscreteTimeSeries(pointInfo.getExtendedName(), pointInfo.getTextRenderer(),
                         colour);
                 point.setDiscreteTimeSeries(discreteTimeSeries);
-                pointTimeSeriesCollection.addDiscreteTimeSeries(discreteTimeSeries);
+                if (pointInfo.isConsolidatedChart())
+                    pointTimeSeriesCollection.addDiscreteTimeSeries(discreteTimeSeries);
                 numericTimeSeries = null;
             }
             else if (pointInfo.getDataType() == DataTypes.ALPHANUMERIC) {

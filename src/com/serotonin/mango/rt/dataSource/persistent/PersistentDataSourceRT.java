@@ -15,6 +15,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import com.serotonin.db.IntValuePair;
 import com.serotonin.mango.Common;
 import com.serotonin.mango.db.dao.DataPointDao;
 import com.serotonin.mango.db.dao.PointValueDao;
@@ -28,12 +29,17 @@ import com.serotonin.mango.rt.dataImage.types.MultistateValue;
 import com.serotonin.mango.rt.dataImage.types.NumericValue;
 import com.serotonin.mango.rt.dataSource.EventDataSource;
 import com.serotonin.mango.rt.publish.persistent.Packet;
+import com.serotonin.mango.rt.publish.persistent.PacketType;
+import com.serotonin.mango.rt.publish.persistent.PayloadReadTimeoutException;
 import com.serotonin.mango.rt.publish.persistent.PersistentAbortException;
 import com.serotonin.mango.rt.publish.persistent.PersistentProtocolException;
 import com.serotonin.mango.vo.DataPointVO;
 import com.serotonin.mango.vo.dataSource.persistent.PersistentDataSourceVO;
 import com.serotonin.mango.vo.dataSource.persistent.PersistentPointLocatorVO;
 import com.serotonin.mango.vo.event.PointEventDetectorVO;
+import com.serotonin.mango.vo.hierarchy.PointFolder;
+import com.serotonin.mango.vo.hierarchy.PointHierarchy;
+import com.serotonin.util.ArrayUtils;
 import com.serotonin.util.SerializationHelper;
 import com.serotonin.util.StringUtils;
 import com.serotonin.util.queue.ByteQueue;
@@ -51,6 +57,37 @@ public class PersistentDataSourceRT extends EventDataSource implements Runnable 
     public PersistentDataSourceRT(PersistentDataSourceVO vo) {
         super(vo);
         this.vo = vo;
+    }
+
+    public int getConnectionCount() {
+        return connectionHandlers.size();
+    }
+
+    public String getConnectionAddress(int index) {
+        try {
+            return connectionHandlers.get(index).getSocketAddress();
+        }
+        catch (IndexOutOfBoundsException e) {
+            return "";
+        }
+    }
+
+    public long getConnectionTime(int index) {
+        try {
+            return connectionHandlers.get(index).getConnectionTime();
+        }
+        catch (IndexOutOfBoundsException e) {
+            return 0;
+        }
+    }
+
+    public long getPacketsReceived(int index) {
+        try {
+            return connectionHandlers.get(index).getPacketsReceived();
+        }
+        catch (IndexOutOfBoundsException e) {
+            return 0;
+        }
     }
 
     //
@@ -146,12 +183,28 @@ public class PersistentDataSourceRT extends EventDataSource implements Runnable 
         private final Socket socket;
         private InputStream in;
         private OutputStream out;
+        int version = 3;
         private final ByteQueue writeBuffer = new ByteQueue();
         private final List<String> indexedXids = new ArrayList<String>();
         final PointValueDao pointValueDao = new PointValueDao();
+        private final long connectionTime;
+        private long packetsReceived;
 
         public ConnectionHandler(Socket socket) {
             this.socket = socket;
+            connectionTime = System.currentTimeMillis();
+        }
+
+        public String getSocketAddress() {
+            return socket.getRemoteSocketAddress().toString();
+        }
+
+        public long getConnectionTime() {
+            return connectionTime;
+        }
+
+        public long getPacketsReceived() {
+            return packetsReceived;
         }
 
         public void run() {
@@ -164,7 +217,7 @@ public class PersistentDataSourceRT extends EventDataSource implements Runnable 
             catch (PersistentProtocolException e) {
                 try {
                     Packet.pushString(writeBuffer, e.getMessage());
-                    Packet.writePacket(out, Packet.ABORT, writeBuffer);
+                    Packet.writePacket(out, version, PacketType.ABORT, writeBuffer);
                     log.warn("Connection handler exception", e);
                     sleepImpl();
                 }
@@ -175,7 +228,7 @@ public class PersistentDataSourceRT extends EventDataSource implements Runnable 
             catch (DoAbortException e) {
                 try {
                     Packet.pushString(writeBuffer, e.getLocalizableMessage().serialize());
-                    Packet.writePacket(out, Packet.ABORT, writeBuffer);
+                    Packet.writePacket(out, version, PacketType.ABORT, writeBuffer);
                     sleepImpl();
                 }
                 catch (IOException e1) {
@@ -207,26 +260,29 @@ public class PersistentDataSourceRT extends EventDataSource implements Runnable 
 
         private void runImpl() throws IOException, PersistentProtocolException, PersistentAbortException,
                 DoAbortException {
-            socket.setSoTimeout(5000);
+            socket.setSoTimeout(Packet.DATA_SOURCE_SOCKET_TIMEOUT);
             in = socket.getInputStream();
             out = socket.getOutputStream();
 
             //
             // Version
-            Packet packet = Packet.readPacket(in);
-            if (packet.getType() != Packet.VERSION)
+            Packet packet = Packet.readPacket(in, 1);
+            packetsReceived++;
+            if (packet.getType() != PacketType.VERSION)
                 throw new PersistentProtocolException("Expected version, got " + packet.getType());
-            if (packet.getPayload().pop() != 1)
-                throw new PersistentProtocolException("Expected version 1, got something else");
+            int requestedVersion = packet.getPayload().popU1B();
             packet.release();
 
             // Version response
-            Packet.writePacket(out, Packet.VERSION, Packet.ONE);
+            if (requestedVersion < version)
+                version = requestedVersion;
+            Packet.writePacket(out, 1, PacketType.VERSION, new byte[] { (byte) version });
 
             //
             // Authentication key
-            packet = Packet.readPacket(in);
-            if (packet.getType() != Packet.AUTH_KEY)
+            packet = Packet.readPacket(in, version);
+            packetsReceived++;
+            if (packet.getType() != PacketType.AUTH_KEY)
                 throw new PersistentProtocolException("Expected auth key, got " + packet.getType());
             String authKey = packet.popString();
             if (!authKey.equals(vo.getAuthorizationKey()))
@@ -234,14 +290,14 @@ public class PersistentDataSourceRT extends EventDataSource implements Runnable 
             packet.release();
 
             // Authentication key response
-            Packet.writePacket(out, Packet.AUTH_KEY, Packet.EMPTY);
+            Packet.writePacket(out, version, PacketType.AUTH_KEY, Packet.EMPTY);
 
-            //
             // Points
             while (true) {
-                packet = Packet.readPacket(in);
+                packet = Packet.readPacket(in, version);
+                packetsReceived++;
                 try {
-                    if (packet.getType() != Packet.POINT)
+                    if (packet.getType() != PacketType.POINT)
                         throw new PersistentProtocolException("Expected points, got " + packet.getType());
 
                     if (packet.getPayload().size() == 0)
@@ -251,7 +307,10 @@ public class PersistentDataSourceRT extends EventDataSource implements Runnable 
                     String xid = packet.popString();
                     indexedXids.add(xid);
                     ensurePoint(xid, packet.getPayload().popAll());
-                    Packet.writePacket(out, Packet.POINT, Packet.EMPTY);
+
+                    if (version < 3)
+                        // As of version 3 we do not send this response.
+                        Packet.writePacket(out, version, PacketType.POINT, Packet.EMPTY);
                 }
                 finally {
                     packet.release();
@@ -259,7 +318,7 @@ public class PersistentDataSourceRT extends EventDataSource implements Runnable 
             }
 
             // Points response
-            Packet.writePacket(out, Packet.POINT, Packet.EMPTY);
+            Packet.writePacket(out, version, PacketType.POINT, Packet.EMPTY);
 
             //
             // Data
@@ -271,33 +330,72 @@ public class PersistentDataSourceRT extends EventDataSource implements Runnable 
             byte[] imageData;
             long time;
 
+            // Corruption tracking
+            PacketInfo[] previousPackets = new PacketInfo[20];
+            int nextPreviousIndex = 0;
+
             while (serverSocket != null) {
                 try {
-                    packet = Packet.readPacket(in);
+                    packet = Packet.readPacket(in, version);
+                    packetsReceived++;
                 }
                 catch (SocketTimeoutException e) {
                     continue;
                 }
+                catch (PayloadReadTimeoutException e) {
+                    StringBuilder sb = new StringBuilder();
+                    for (int i = 0; i < previousPackets.length; i++) {
+                        int index = (nextPreviousIndex + i) % previousPackets.length;
+                        if (previousPackets[index] != null) {
+                            sb.append('[');
+                            sb.append(previousPackets[index].type).append(',');
+                            sb.append(previousPackets[index].length).append(',');
+                            sb.append(previousPackets[index].receivedTime).append(']');
+                        }
+                    }
+                    log.error("Payload read timeout: type=" + e.getType().name() + ", len=" + e.getLength()
+                            + ", payload=[" + ArrayUtils.toHexString(e.getPayload()) + "], previous=" + sb);
+                    continue;
+                }
+
+                PacketInfo pi = new PacketInfo();
+                pi.type = packet.getType().name();
+                pi.length = packet.getPayload().size();
+                pi.receivedTime = System.currentTimeMillis();
+                previousPackets[nextPreviousIndex] = pi;
+                nextPreviousIndex = (nextPreviousIndex + 1) % previousPackets.length;
 
                 try {
-                    if (packet.getType() == Packet.CLOSE)
+                    if (packet.getType() == PacketType.CLOSE)
                         break;
 
-                    if (packet.getType() == Packet.TEST)
+                    if (packet.getType() == PacketType.TEST)
                         continue;
 
-                    if (packet.getType() == Packet.RANGE_COUNT) {
+                    if (packet.getType() == PacketType.RANGE_COUNT) {
                         Common.timer.execute(new RangeCountHandler(packet, out));
                         continue;
                     }
 
-                    if (packet.getType() == Packet.POINT_UPDATE) {
+                    if (packet.getType() == PacketType.POINT_UPDATE) {
                         int index = packet.getPayload().popU2B();
                         ensurePoint(indexedXids.get(index), packet.getPayload().popAll());
                         continue;
                     }
 
-                    if (packet.getType() != Packet.DATA)
+                    if (packet.getType() == PacketType.POINT_HIERARCHY) {
+                        // Point hierarchy update.
+                        int index = packet.getPayload().popU2B();
+                        int len = packet.getPayload().popU2B();
+
+                        List<String> path = new ArrayList<String>();
+                        for (int i = 0; i < len; i++)
+                            path.add(packet.popString());
+                        updatePointHierarchy(indexedXids.get(index), path);
+                        continue;
+                    }
+
+                    if (packet.getType() != PacketType.DATA)
                         throw new PersistentProtocolException("Expected data, got " + packet.getType());
 
                     payload = packet.getPayload();
@@ -341,11 +439,18 @@ public class PersistentDataSourceRT extends EventDataSource implements Runnable 
             }
         }
 
+        class PacketInfo {
+            String type;
+            int length;
+            long receivedTime;
+        }
+
         private DataPointVO unserialize(byte[] serializedData) throws DoAbortException {
             try {
                 return (DataPointVO) SerializationHelper.readObjectFromArray(serializedData);
             }
             catch (Exception e) {
+                log.error("Point deserialization error", e);
                 throw new DoAbortException(new LocalizableMessage("event.persistent.pointDeserialization",
                         e.getMessage()));
             }
@@ -384,6 +489,9 @@ public class PersistentDataSourceRT extends EventDataSource implements Runnable 
                 updatePoint(oldDpvo, newDpvo);
             }
             else {
+                if (StringUtils.isLengthGreaterThan(xid, 50))
+                    throw new DoAbortException(new LocalizableMessage("event.persistent.xidTooLong", xid));
+
                 // The point does not exist. Create it.
                 newDpvo.setId(Common.NEW_ID);
                 newDpvo.setXid(xid);
@@ -401,24 +509,59 @@ public class PersistentDataSourceRT extends EventDataSource implements Runnable 
 
         private void updatePoint(DataPointVO oldDpvo, DataPointVO newDpvo) {
             if (PersistentDataSourceRT.this.vo.isAcceptPointUpdates()) {
-                boolean changed = false;
+                oldDpvo.setName(newDpvo.getName());
+                oldDpvo.setDeviceName(newDpvo.getDeviceName());
+                oldDpvo.setEngineeringUnits(newDpvo.getEngineeringUnits());
+                oldDpvo.setTextRenderer(newDpvo.getTextRenderer());
+                oldDpvo.setChartRenderer(newDpvo.getChartRenderer());
+                oldDpvo.setChartColour(newDpvo.getChartColour());
+                Common.ctx.getRuntimeManager().saveDataPoint(oldDpvo);
+            }
+        }
 
-                // Check the name
-                if (!StringUtils.isEqual(oldDpvo.getName(), newDpvo.getName())) {
-                    oldDpvo.setName(newDpvo.getName());
-                    changed = true;
+        private void updatePointHierarchy(String xid, List<String> path) {
+            // Only update if we accept point updates.
+            if (PersistentDataSourceRT.this.vo.isAcceptPointUpdates()) {
+                DataPointDao dataPointDao = new DataPointDao();
+
+                // Get the point vo.
+                DataPointRT dprt = pointXids.get(xid);
+                DataPointVO dpvo;
+                if (dprt == null)
+                    // Not currently enabled.
+                    dpvo = dataPointDao.getDataPoint(xid);
+                else
+                    dpvo = dprt.getVO();
+
+                if (dpvo == null)
+                    return;
+
+                PointHierarchy pointHierarchy = dataPointDao.getPointHierarchy();
+
+                // Get the current path to the point.
+                List<PointFolder> folders = pointHierarchy.getFolderPath(dpvo.getId());
+                PointFolder oldFolder = folders.get(folders.size() - 1);
+
+                // Get the new folder for the point. Create new folders as necessary.
+                PointFolder newFolder = pointHierarchy.getRoot();
+                for (String s : path) {
+                    PointFolder sub = newFolder.getSubfolder(s);
+                    if (sub == null) {
+                        // Add the folder
+                        sub = new PointFolder();
+                        sub.setName(s);
+                        newFolder.addSubfolder(sub);
+                    }
+                    newFolder = sub;
                 }
-                // ... and the engineering unit
-                else if (oldDpvo.getEngineeringUnits() != newDpvo.getEngineeringUnits()) {
-                    oldDpvo.setEngineeringUnits(newDpvo.getEngineeringUnits());
-                    changed = true;
+
+                if (oldFolder != newFolder) {
+                    oldFolder.removeDataPoint(dpvo.getId());
+                    newFolder.addDataPoint(new IntValuePair(dpvo.getId(), dpvo.getName()));
+
+                    // Save the hierarchy
+                    dataPointDao.savePointHierarchy(pointHierarchy.getRoot());
                 }
-
-                // The only other attribute we might be interested in updating are the text renderer and the 
-                // chart renderer. Maybe later.
-
-                if (changed)
-                    Common.ctx.getRuntimeManager().saveDataPoint(oldDpvo);
             }
         }
 
@@ -463,7 +606,7 @@ public class PersistentDataSourceRT extends EventDataSource implements Runnable 
 
                 try {
                     synchronized (out) {
-                        Packet.writePacket(out, Packet.RANGE_COUNT, queue);
+                        Packet.writePacket(out, version, PacketType.RANGE_COUNT, queue);
                     }
                 }
                 catch (IOException e) {

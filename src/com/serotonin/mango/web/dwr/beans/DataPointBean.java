@@ -27,6 +27,7 @@ public class DataPointBean {
     private boolean settable;
     private int dataType;
     private final LocalizableMessage dataTypeMessage;
+    private final String chartColour;
 
     public DataPointBean(DataPointVO vo) {
         id = vo.getId();
@@ -34,6 +35,7 @@ public class DataPointBean {
         settable = vo.getPointLocator().isSettable();
         dataType = vo.getPointLocator().getDataTypeId();
         dataTypeMessage = vo.getDataTypeMessage();
+        chartColour = vo.getChartColour();
     }
 
     public int getId() {
@@ -70,5 +72,9 @@ public class DataPointBean {
 
     public LocalizableMessage getDataTypeMessage() {
         return dataTypeMessage;
+    }
+
+    public String getChartColour() {
+        return chartColour;
     }
 }

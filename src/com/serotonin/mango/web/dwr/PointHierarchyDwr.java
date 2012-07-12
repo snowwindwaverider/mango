@@ -29,7 +29,7 @@ import com.serotonin.mango.vo.hierarchy.PointHierarchy;
 public class PointHierarchyDwr {
     public PointFolder getPointHierarchy() {
         DataPointDao dataPointDao = new DataPointDao();
-        PointHierarchy ph = dataPointDao.getPointHierarchy(true);
+        PointHierarchy ph = dataPointDao.getPointHierarchy();
         return ph.getRoot();
     }
 

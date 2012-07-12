@@ -22,10 +22,13 @@ import gnu.io.NoSuchPortException;
 import gnu.io.PortInUseException;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.serotonin.ShouldNeverHappenException;
 import com.serotonin.mango.Common;
+import com.serotonin.mango.db.dao.DataSourceDao;
 import com.serotonin.mango.rt.dataImage.DataPointRT;
 import com.serotonin.mango.rt.dataImage.PointValueTime;
 import com.serotonin.mango.rt.dataImage.SetPointSource;
@@ -93,6 +96,22 @@ abstract public class DataSourceRT implements ILifecycle {
         return vo.getName();
     }
 
+    /**
+     * This method is usable by subclasses to retrieve serializable data stored using the setPersistentData method.
+     */
+    public Object getPersistentData() {
+        return new DataSourceDao().getPersistentData(vo.getId());
+    }
+
+    /**
+     * This method is usable by subclasses to store any type of serializable data. This intention is to provide a
+     * mechanism for data source RTs to be able to persist data between runs. Normally this method would at least be
+     * called in the terminate method, but may also be called regularly for failover purposes.
+     */
+    protected void setPersistentData(Object persistentData) {
+        new DataSourceDao().savePersistentData(vo.getId(), persistentData);
+    }
+
     public void addDataPoint(DataPointRT dataPoint) {
         synchronized (pointListChangeLock) {
             addedChangedPoints.remove(dataPoint);
@@ -121,7 +140,11 @@ abstract public class DataSourceRT implements ILifecycle {
     protected void raiseEvent(int eventId, long time, boolean rtn, LocalizableMessage message) {
         message = new LocalizableMessage("event.ds", vo.getName(), message);
         DataSourceEventType type = getEventType(eventId);
-        Common.ctx.getEventManager().raiseEvent(type, time, rtn, type.getAlarmLevel(), message);
+
+        Map<String, Object> context = new HashMap<String, Object>();
+        context.put("dataSource", vo);
+
+        Common.ctx.getEventManager().raiseEvent(type, time, rtn, type.getAlarmLevel(), message, context);
     }
 
     protected void returnToNormal(int eventId, long time) {

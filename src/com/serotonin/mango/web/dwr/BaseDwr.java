@@ -33,6 +33,7 @@ import javax.servlet.jsp.jstl.fmt.LocalizationContext;
 import org.directwebremoting.WebContext;
 import org.directwebremoting.WebContextFactory;
 import org.joda.time.DateTime;
+import org.joda.time.IllegalFieldValueException;
 
 import com.serotonin.ShouldNeverHappenException;
 import com.serotonin.mango.Common;
@@ -241,7 +242,7 @@ abstract public class BaseDwr {
     protected List<DataPointBean> getReadablePoints() {
         User user = Common.getUser();
 
-        List<DataPointVO> points = new DataPointDao().getDataPoints(DataPointExtendedNameComparator.instance);
+        List<DataPointVO> points = new DataPointDao().getDataPoints(DataPointExtendedNameComparator.instance, false);
         if (!Permissions.hasAdmin(user)) {
             List<DataPointVO> userPoints = new ArrayList<DataPointVO>();
             for (DataPointVO dp : points) {
@@ -268,6 +269,7 @@ abstract public class BaseDwr {
         result.put("toDay", dt.getDayOfMonth());
         result.put("toHour", dt.getHourOfDay());
         result.put("toMinute", dt.getMinuteOfHour());
+        result.put("toSecond", 0);
 
         dt = DateUtils.minus(dt, periodType, period);
         result.put("fromYear", dt.getYear());
@@ -275,6 +277,7 @@ abstract public class BaseDwr {
         result.put("fromDay", dt.getDayOfMonth());
         result.put("fromHour", dt.getHourOfDay());
         result.put("fromMinute", dt.getMinuteOfHour());
+        result.put("fromSecond", 0);
 
         return result;
     }
@@ -313,5 +316,21 @@ abstract public class BaseDwr {
                 users.add(u);
         }
         return users;
+    }
+
+    //
+    //
+    // Charts and data in a time frame
+    //
+    protected DateTime createDateTime(int year, int month, int day, int hour, int minute, int second, boolean none) {
+        DateTime dt = null;
+        try {
+            if (!none)
+                dt = new DateTime(year, month, day, hour, minute, second, 0);
+        }
+        catch (IllegalFieldValueException e) {
+            dt = new DateTime();
+        }
+        return dt;
     }
 }

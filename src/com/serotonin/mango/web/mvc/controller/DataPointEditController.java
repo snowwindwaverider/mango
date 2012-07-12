@@ -60,8 +60,10 @@ public class DataPointEditController extends SimpleFormController {
         DataPointVO dataPoint;
         User user = Common.getUser(request);
 
-        if (isFormSubmission(request))
+        if (isFormSubmission(request)) {
             dataPoint = user.getEditPoint();
+            dataPoint.setDiscardExtremeValues(false); // Checkbox
+        }
         else {
             int id;
             DataPointDao dataPointDao = new DataPointDao();
@@ -91,7 +93,6 @@ public class DataPointEditController extends SimpleFormController {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     protected Map referenceData(HttpServletRequest request, Object command, Errors errors) {
         Map<String, Object> result = new HashMap<String, Object>();
         DataPointVO point = (DataPointVO) command;
@@ -109,12 +110,8 @@ public class DataPointEditController extends SimpleFormController {
 
     @Override
     protected void initBinder(HttpServletRequest request, ServletRequestDataBinder binder) {
-        binder
-                .registerCustomEditor(Double.TYPE, "tolerance", new DecimalFormatEditor(new DecimalFormat("#.##"),
-                        false));
-        binder
-                .registerCustomEditor(Integer.TYPE, "purgePeriod", new IntegerFormatEditor(new DecimalFormat("#"),
-                        false));
+        binder.registerCustomEditor(Double.TYPE, "tolerance", new DecimalFormatEditor(new DecimalFormat("#.##"), false));
+        binder.registerCustomEditor(Integer.TYPE, "purgePeriod", new IntegerFormatEditor(new DecimalFormat("#"), false));
         binder.registerCustomEditor(Double.TYPE, "discardLowLimit", new DecimalFormatEditor(new DecimalFormat("#.##"),
                 false));
         binder.registerCustomEditor(Double.TYPE, "discardHighLimit", new DecimalFormatEditor(new DecimalFormat("#.##"),

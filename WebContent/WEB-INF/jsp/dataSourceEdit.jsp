@@ -371,5 +371,11 @@
     <c:when test="${dataSource.type.id == applicationScope['constants.DataSourceVO.Types.OPC']}">
       <jsp:include page="dataSourceEdit/editOpc.jsp"/>
     </c:when>
+    <c:when test="${dataSource.type.id == applicationScope['constants.DataSourceVO.Types.JMX']}">
+      <jsp:include page="dataSourceEdit/editJmx.jsp"/>
+    </c:when>
+    <c:when test="${dataSource.type.id == applicationScope['constants.DataSourceVO.Types.INTERNAL']}">
+      <jsp:include page="dataSourceEdit/editInternal.jsp"/>
+    </c:when>
   </c:choose>
 </tag:page>

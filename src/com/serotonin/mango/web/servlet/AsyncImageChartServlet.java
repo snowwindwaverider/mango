@@ -166,7 +166,7 @@ public class AsyncImageChartServlet extends BaseInfoServlet {
 
     class PointDataRetriever implements Runnable, MappedRowCallback<PointValueTime>, DataQuantizerCallback {
         private final int dataPointId;
-        private final Color colour;
+        private Color colour;
         private final int imageWidth;
         private long from;
         private long to;
@@ -188,6 +188,14 @@ public class AsyncImageChartServlet extends BaseInfoServlet {
         @Override
         public void run() {
             DataPointVO dp = dataPointDao.getDataPoint(dataPointId);
+            try {
+                if (colour == null && !StringUtils.isEmpty(dp.getChartColour()))
+                    colour = ColorUtils.toColor(dp.getChartColour());
+            }
+            catch (InvalidArgumentException e) {
+                // no op
+            }
+
             int dataType = dp.getPointLocator().getDataTypeId();
 
             if (dataType == DataTypes.NUMERIC) {

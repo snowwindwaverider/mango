@@ -17,10 +17,15 @@
     along with this program.  If not, see http://www.gnu.org/licenses/.
 --%>
 <%@ include file="/WEB-INF/jsp/include/tech.jsp" %>
+
+<c:if test='${mango:envBoolean("ssl.on", false)}'>
+  <c:if test='${pageContext.request.scheme == "http"}'>
+    <c:redirect url='https://${pageContext.request.serverName}:${mango:envString("ssl.port", "8443")}${requestScope["javax.servlet.forward.request_uri"]}'/>
+  </c:if>
+</c:if>
+
 <tag:page onload="setFocus">
   <script type="text/javascript">
-    compatible = false;
-     
     function setFocus() {
         $("username").focus();
         BrowserDetect.init();
@@ -30,24 +35,18 @@
         if (checkCombo(BrowserDetect.browser, BrowserDetect.version, BrowserDetect.OS)) {
             $("browserImg").src = "images/accept.png";
             show("okMsg");
-            compatible = true;
         }
         else {
             $("browserImg").src = "images/thumb_down.png";
             show("warnMsg");
         }
     }
-    
-    function nag() {
-        if (!compatible)
-            alert('<fmt:message key="login.nag"/>');
-    }
   </script>
   
   <table cellspacing="0" cellpadding="0" border="0">
     <tr>
       <td>
-        <form action="login.htm" method="post" onclick="nag()">
+        <form action="login.htm" method="post">
           <table>
             <spring:bind path="login.username">
               <tr>

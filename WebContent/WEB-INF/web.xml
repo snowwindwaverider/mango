@@ -222,6 +222,16 @@
     <servlet-class>com.serotonin.mango.web.servlet.ImageValueServlet</servlet-class>
   </servlet>
   
+  <servlet>
+    <servlet-name>chartExport</servlet-name>
+    <servlet-class>com.serotonin.mango.web.servlet.ChartExportServlet</servlet-class>
+  </servlet>
+  
+  <servlet>
+    <servlet-name>eventExport</servlet-name>
+    <servlet-class>com.serotonin.mango.web.servlet.EventExportServlet</servlet-class>
+  </servlet>
+  
 
   <!-- 
     Servlet mappings.
@@ -263,7 +273,7 @@
 
   <servlet-mapping>
     <servlet-name>reportEventExport</servlet-name>
-    <url-pattern>/eventExport/*</url-pattern>
+    <url-pattern>/reportEventExport/*</url-pattern>
   </servlet-mapping>
 
   <servlet-mapping>
@@ -281,6 +291,16 @@
     <url-pattern>/imageValue/*</url-pattern>
   </servlet-mapping>
  
+  <servlet-mapping>
+    <servlet-name>chartExport</servlet-name>
+    <url-pattern>/chartExport/*</url-pattern>
+  </servlet-mapping>
+ 
+  <servlet-mapping>
+    <servlet-name>eventExport</servlet-name>
+    <url-pattern>/eventExport/*</url-pattern>
+  </servlet-mapping>
+
   
   <!-- 
     Context listeners.

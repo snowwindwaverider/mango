@@ -28,7 +28,6 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.directwebremoting.WebContextFactory;
 import org.joda.time.DateTime;
-import org.joda.time.IllegalFieldValueException;
 
 import com.serotonin.mango.Common;
 import com.serotonin.mango.rt.RuntimeManager;
@@ -41,6 +40,7 @@ import com.serotonin.mango.view.chart.StatisticsChartRenderer;
 import com.serotonin.mango.vo.DataPointVO;
 import com.serotonin.mango.vo.User;
 import com.serotonin.mango.vo.bean.ImageValueBean;
+import com.serotonin.mango.web.dwr.beans.DataExportDefinition;
 import com.serotonin.mango.web.dwr.beans.RenderedPointValueTime;
 import com.serotonin.mango.web.dwr.beans.WatchListState;
 import com.serotonin.mango.web.servlet.ImageValueServlet;
@@ -107,26 +107,10 @@ public class DataPointDetailsDwr extends BaseDwr {
 
     @MethodFilter
     public DwrResponseI18n getImageChartData(int fromYear, int fromMonth, int fromDay, int fromHour, int fromMinute,
-            boolean fromNone, int toYear, int toMonth, int toDay, int toHour, int toMinute, boolean toNone, int width,
-            int height) {
-
-        DateTime from = null;
-        try {
-            if (!fromNone)
-                from = new DateTime(fromYear, fromMonth, fromDay, fromHour, fromMinute, 0, 0);
-        }
-        catch (IllegalFieldValueException e) {
-            from = new DateTime();
-        }
-
-        DateTime to = null;
-        try {
-            if (!toNone)
-                to = new DateTime(toYear, toMonth, toDay, toHour, toMinute, 0, 0);
-        }
-        catch (IllegalFieldValueException e) {
-            to = new DateTime();
-        }
+            int fromSecond, boolean fromNone, int toYear, int toMonth, int toDay, int toHour, int toMinute,
+            int toSecond, boolean toNone, int width, int height) {
+        DateTime from = createDateTime(fromYear, fromMonth, fromDay, fromHour, fromMinute, fromSecond, fromNone);
+        DateTime to = createDateTime(toYear, toMonth, toDay, toHour, toMinute, toSecond, toNone);
 
         StringBuilder htmlData = new StringBuilder();
         htmlData.append("<img src=\"chart/ft_");
@@ -147,6 +131,15 @@ public class DataPointDetailsDwr extends BaseDwr {
         response.addData("chart", htmlData.toString());
         addAsof(response);
         return response;
+    }
+
+    @MethodFilter
+    public void getChartData(int fromYear, int fromMonth, int fromDay, int fromHour, int fromMinute, int fromSecond,
+            boolean fromNone, int toYear, int toMonth, int toDay, int toHour, int toMinute, int toSecond, boolean toNone) {
+        DateTime from = createDateTime(fromYear, fromMonth, fromDay, fromHour, fromMinute, fromSecond, fromNone);
+        DateTime to = createDateTime(toYear, toMonth, toDay, toHour, toMinute, toSecond, toNone);
+        DataExportDefinition def = new DataExportDefinition(new int[] { getDataPointVO().getId() }, from, to);
+        Common.getUser().setDataExportDefinition(def);
     }
 
     @MethodFilter

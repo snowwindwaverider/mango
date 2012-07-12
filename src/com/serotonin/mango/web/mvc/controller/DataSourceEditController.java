@@ -101,7 +101,7 @@ public class DataSourceEditController extends ParameterizableViewController {
             model.put("commPortError", e.getMessage());
         }
 
-        List<DataPointVO> allPoints = new DataPointDao().getDataPoints(DataPointExtendedNameComparator.instance);
+        List<DataPointVO> allPoints = new DataPointDao().getDataPoints(DataPointExtendedNameComparator.instance, false);
         List<DataPointVO> userPoints = new LinkedList<DataPointVO>();
         List<DataPointVO> analogPoints = new LinkedList<DataPointVO>();
         for (DataPointVO dp : allPoints) {

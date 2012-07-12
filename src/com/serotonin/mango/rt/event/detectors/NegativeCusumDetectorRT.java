@@ -80,9 +80,9 @@ public class NegativeCusumDetectorRT extends TimeDelayedEventDetectorRT {
 
         if (negativeCusumActive)
             // Schedule a job that will call the event active if it runs.
-            scheduleJob(negativeCusumActiveTime);
+            scheduleJob();
         else
-            unscheduleJob();
+            unscheduleJob(negativeCusumInactiveTime);
     }
 
     @Override
@@ -107,6 +107,11 @@ public class NegativeCusumDetectorRT extends TimeDelayedEventDetectorRT {
         }
     }
 
+    @Override
+    protected long getConditionActiveTime() {
+        return negativeCusumActiveTime;
+    }
+
     /**
      * This method is only called when the event changes between being active or not, i.e. if the event currently is
      * active, then it should never be called with a value of true. That said, provision is made to ensure that the
@@ -122,7 +127,7 @@ public class NegativeCusumDetectorRT extends TimeDelayedEventDetectorRT {
             if (negativeCusumActive)
                 // Ok, things are good. Carry on...
                 // Raise the event.
-                raiseEvent(negativeCusumActiveTime + getDurationMS());
+                raiseEvent(negativeCusumActiveTime + getDurationMS(), createEventContext());
             else
                 eventActive = false;
         }

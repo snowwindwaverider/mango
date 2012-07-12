@@ -53,8 +53,6 @@ import com.serotonin.mango.rt.event.EventInstance;
 import com.serotonin.mango.rt.maint.work.EmailWorkItem;
 import com.serotonin.mango.util.DocumentationItem;
 import com.serotonin.mango.util.DocumentationManifest;
-import com.serotonin.mango.util.freemarker.MangoEmailContent;
-import com.serotonin.mango.util.freemarker.MessageFormatDirective;
 import com.serotonin.mango.vo.DataPointVO;
 import com.serotonin.mango.vo.User;
 import com.serotonin.mango.vo.WatchList;
@@ -65,6 +63,7 @@ import com.serotonin.mango.web.dwr.beans.WatchListState;
 import com.serotonin.mango.web.dwr.longPoll.LongPollData;
 import com.serotonin.mango.web.dwr.longPoll.LongPollRequest;
 import com.serotonin.mango.web.dwr.longPoll.LongPollState;
+import com.serotonin.mango.web.email.MangoEmailContent;
 import com.serotonin.util.StringUtils;
 import com.serotonin.web.dwr.DwrResponseI18n;
 import com.serotonin.web.dwr.MethodFilter;
@@ -80,7 +79,6 @@ public class MiscDwr extends BaseDwr {
     private final DataPointDetailsDwr dataPointDetailsDwr = new DataPointDetailsDwr();
     private final ViewDwr viewDwr = new ViewDwr();
     private final CustomViewDwr customViewDwr = new CustomViewDwr();
-
 
     public boolean inhibitEmailHandler(boolean toggleSuppressAlarms) {
         SystemSettingsDao systemSettingsDao = new SystemSettingsDao();
@@ -98,13 +96,17 @@ public class MiscDwr extends BaseDwr {
     
     @MethodFilter
     public DwrResponseI18n toggleSilence(int eventId) {
-        User user = Common.getUser();
-        boolean result = new EventDao().toggleSilence(eventId, user.getId());
-        resetLastAlarmLevelChange();
-
         DwrResponseI18n response = new DwrResponseI18n();
         response.addData("eventId", eventId);
-        response.addData("silenced", result);
+
+        User user = Common.getUser();
+        if (user != null) {
+            boolean result = new EventDao().toggleSilence(eventId, user.getId());
+            resetLastAlarmLevelChange();
+            response.addData("silenced", result);
+        }
+        else
+            response.addData("silenced", false);
 
         return response;
     }
@@ -128,28 +130,33 @@ public class MiscDwr extends BaseDwr {
         return response;
     }
 
-    @MethodFilter
     public int acknowledgeEvent(int eventId) {
         User user = Common.getUser();
-        new EventDao().ackEvent(eventId, user.getId(), 0);
-        resetLastAlarmLevelChange();
+        if (user != null) {
+            new EventDao().ackEvent(eventId, System.currentTimeMillis(), user.getId(), 0);
+            resetLastAlarmLevelChange();
+        }
         return eventId;
     }
 
-    @MethodFilter
     public void acknowledgeAllPendingEvents() {
         User user = Common.getUser();
-        EventDao eventDao = new EventDao();
-        for (EventInstance evt : eventDao.getPendingEvents(user.getId()))
-            eventDao.ackEvent(evt.getId(), user.getId(), 0);
-        resetLastAlarmLevelChange();
+        if (user != null) {
+            EventDao eventDao = new EventDao();
+            long now = System.currentTimeMillis();
+            for (EventInstance evt : eventDao.getPendingEvents(user.getId()))
+                eventDao.ackEvent(evt.getId(), now, user.getId(), 0);
+            resetLastAlarmLevelChange();
+        }
     }
 
-    @MethodFilter
     public boolean toggleUserMuted() {
         User user = Common.getUser();
-        user.setMuted(!user.isMuted());
-        return user.isMuted();
+        if (user != null) {
+            user.setMuted(!user.isMuted());
+            return user.isMuted();
+        }
+        return false;
     }
 
     public Map<String, Object> getDocumentationItem(String documentId) {
@@ -214,11 +221,11 @@ public class MiscDwr extends BaseDwr {
             try {
                 ResourceBundle bundle = Common.getBundle();
                 Map<String, Object> model = new HashMap<String, Object>();
-                model.put("fmt", new MessageFormatDirective(bundle));
                 model.put("user", Common.getUser());
                 model.put("message", new LocalizableMessage("common.default", message));
-                EmailWorkItem.queueEmail(toAddrs, I18NUtils.getMessage(bundle, "ftl.testEmail"), new MangoEmailContent(
-                        "testEmail", model, Common.UTF8));
+                MangoEmailContent cnt = new MangoEmailContent("testEmail", model, bundle, I18NUtils.getMessage(bundle,
+                        "ftl.testEmail"), Common.UTF8);
+                EmailWorkItem.queueEmail(toAddrs, cnt);
             }
             catch (Exception e) {
                 response.addGenericMessage("common.default", e.getMessage());
@@ -301,7 +308,7 @@ public class MiscDwr extends BaseDwr {
 
         long expireTime = System.currentTimeMillis() + 60000; // One minute
         LongPollState state = data.getState();
-        int waitTime = new SystemSettingsDao().getIntValue(SystemSettingsDao.UI_PERFORAMANCE);
+        int waitTime = SystemSettingsDao.getIntValue(SystemSettingsDao.UI_PERFORAMANCE);
 
         // For users that log in on multiple machines (or browsers), reset the last alarm timestamp so that it always
         // gets reset with at least each new poll. For now this beats writing user-specific event change tracking code.

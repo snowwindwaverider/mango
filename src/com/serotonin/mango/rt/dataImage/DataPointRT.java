@@ -52,7 +52,6 @@ import com.serotonin.util.ObjectUtils;
 public class DataPointRT implements IDataPoint, ILifecycle, TimeoutClient {
     private static final Log LOG = LogFactory.getLog(DataPointRT.class);
     private static final PvtTimeComparator pvtTimeComparator = new PvtTimeComparator();
-    private static final SystemSettingsDao SYSTEM_SETTINGS_DAO = new SystemSettingsDao();
 
     // Configuration data.
     private final DataPointVO vo;
@@ -184,7 +183,7 @@ public class DataPointRT implements IDataPoint, ILifecycle, TimeoutClient {
                 return;
         }
 
-        if (newValue.getTime() > System.currentTimeMillis() + SYSTEM_SETTINGS_DAO.getFutureDateLimit()) {
+        if (newValue.getTime() > System.currentTimeMillis() + SystemSettingsDao.getFutureDateLimit()) {
             // Too far future dated. Toss it. But log a message first.
             LOG.warn("Future dated value detected: pointId=" + vo.getId() + ", value=" + newValue.getStringValue()
                     + ", type=" + vo.getPointLocator().getDataTypeId() + ", ts=" + newValue.getTime(), new Exception());
@@ -465,14 +464,13 @@ public class DataPointRT implements IDataPoint, ILifecycle, TimeoutClient {
 
         @Override
         public int getPriority() {
-            return WorkItem.PRIORITY_HIGH;
+            return WorkItem.PRIORITY_MEDIUM;
         }
     }
 
     //
-    // /
-    // / Lifecycle
-    // /
+    //
+    // Lifecycle
     //
     public void initialize() {
         rm = Common.ctx.getRuntimeManager();
@@ -512,5 +510,14 @@ public class DataPointRT implements IDataPoint, ILifecycle, TimeoutClient {
 
     public void joinTermination() {
         // no op
+    }
+
+    public void initializeHistorical() {
+        rm = Common.ctx.getRuntimeManager();
+        initializeIntervalLogging();
+    }
+
+    public void terminateHistorical() {
+        terminateIntervalLogging();
     }
 }

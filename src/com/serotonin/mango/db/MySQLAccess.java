@@ -33,6 +33,16 @@ public class MySQLAccess extends BasePooledAccess {
     }
 
     @Override
+    protected void initializeImpl(String propertyPrefix) {
+        super.initializeImpl(propertyPrefix);
+        dataSource.setInitialSize(3);
+        dataSource.setMaxWait(-1);
+        dataSource.setTestWhileIdle(true);
+        dataSource.setTimeBetweenEvictionRunsMillis(10000);
+        dataSource.setMinEvictableIdleTimeMillis(60000);
+    }
+
+    @Override
     protected String getUrl(String propertyPrefix) {
         String url = super.getUrl(propertyPrefix);
         if (url.indexOf('?') > 0)

@@ -44,6 +44,7 @@ import com.serotonin.mango.Common;
 import com.serotonin.mango.db.DatabaseAccess;
 import com.serotonin.mango.vo.permission.Permissions;
 import com.serotonin.mango.web.mvc.form.SqlForm;
+import com.serotonin.util.SerializationHelper;
 
 public class SqlController extends AbstractFormController {
     private static final Log LOG = LogFactory.getLog(SqlController.class);
@@ -89,8 +90,10 @@ public class SqlController extends AbstractFormController {
                                 if (meta.getColumnType(i + 1) == Types.CLOB)
                                     row.add(rs.getString(i + 1));
                                 else if (meta.getColumnType(i + 1) == Types.LONGVARBINARY
-                                        || meta.getColumnType(i + 1) == Types.BLOB)
-                                    row.add("Serialized data");
+                                        || meta.getColumnType(i + 1) == Types.BLOB) {
+                                    Object o = SerializationHelper.readObject(rs.getBlob(i + 1).getBinaryStream());
+                                    row.add("Serialized data(" + o + ")");
+                                }
                                 else
                                     row.add(rs.getObject(i + 1));
                             }

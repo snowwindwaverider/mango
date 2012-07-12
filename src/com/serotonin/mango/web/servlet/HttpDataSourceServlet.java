@@ -68,12 +68,10 @@ public class HttpDataSourceServlet extends HttpServlet {
     private static final long serialVersionUID = -1;
 
     private HttpReceiverMulticaster multicaster;
-    private SystemSettingsDao systemSettingsDao;
 
     @Override
     public void init() {
         multicaster = Common.ctx.getHttpReceiverMulticaster();
-        systemSettingsDao = new SystemSettingsDao();
     }
 
     @Override
@@ -151,7 +149,7 @@ public class HttpDataSourceServlet extends HttpServlet {
             messages.add("Unconsumed key: " + unconsumed);
 
         // Write the prologue
-        response.getWriter().write(systemSettingsDao.getValue(SystemSettingsDao.HTTPDS_EPILOGUE));
+        response.getWriter().write(SystemSettingsDao.getValue(SystemSettingsDao.HTTPDS_EPILOGUE));
 
         for (String message : messages) {
             response.getWriter().write(message);
@@ -159,7 +157,7 @@ public class HttpDataSourceServlet extends HttpServlet {
         }
 
         // Write the epilogue
-        response.getWriter().write(systemSettingsDao.getValue(SystemSettingsDao.HTTPDS_EPILOGUE));
+        response.getWriter().write(SystemSettingsDao.getValue(SystemSettingsDao.HTTPDS_EPILOGUE));
     }
 
     private void addData(HttpReceiverData data, String name, String value, String time) {

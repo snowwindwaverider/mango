@@ -33,8 +33,8 @@ import com.serotonin.mango.db.dao.ReportDao;
 import com.serotonin.mango.vo.User;
 import com.serotonin.mango.vo.permission.Permissions;
 import com.serotonin.mango.vo.report.ReportChartCreator;
-import com.serotonin.mango.vo.report.ReportInstance;
 import com.serotonin.mango.vo.report.ReportChartCreator.PointStatistics;
+import com.serotonin.mango.vo.report.ReportInstance;
 
 /**
  * @author Matthew Lohbihler
@@ -74,7 +74,6 @@ public class ReportChartController extends AbstractController {
             return null;
         }
 
-        @SuppressWarnings("unchecked")
         public void render(Map model, HttpServletRequest request, HttpServletResponse response) throws Exception {
             response.getWriter().write(content);
         }

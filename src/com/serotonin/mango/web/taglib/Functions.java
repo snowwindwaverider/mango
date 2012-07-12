@@ -20,6 +20,8 @@ package com.serotonin.mango.web.taglib;
 
 import java.util.regex.Pattern;
 
+import com.serotonin.mango.Common;
+import com.serotonin.mango.DataTypes;
 import com.serotonin.mango.rt.dataImage.PointValueTime;
 import com.serotonin.mango.rt.dataImage.types.MangoValue;
 import com.serotonin.mango.rt.dataImage.types.NumericValue;
@@ -30,16 +32,22 @@ import com.serotonin.web.taglib.DateFunctions;
 
 public class Functions {
     public static String getHtmlText(DataPointVO point, PointValueTime pointValue) {
+        if (point == null)
+            return "-";
         String text = point.getTextRenderer().getText(pointValue, TextRenderer.HINT_FULL);
         String colour = point.getTextRenderer().getColour(pointValue);
-        return getHtml(colour, text);
+        return getHtml(colour, text, point.getPointLocator().getDataTypeId() == DataTypes.ALPHANUMERIC);
     }
 
     public static String getRenderedText(DataPointVO point, PointValueTime pointValue) {
+        if (point == null)
+            return "-";
         return point.getTextRenderer().getText(pointValue, TextRenderer.HINT_FULL);
     }
 
     public static String getRawText(DataPointVO point, PointValueTime pointValue) {
+        if (point == null)
+            return "-";
         String result = point.getTextRenderer().getText(pointValue, TextRenderer.HINT_RAW);
         if (!StringUtils.isEmpty(result))
             return encodeDQuot(result);
@@ -47,23 +55,29 @@ public class Functions {
     }
 
     public static String getHtmlTextValue(DataPointVO point, MangoValue value) {
+        if (point == null)
+            return "-";
         return getHtmlTextValue(point, value, TextRenderer.HINT_FULL);
     }
 
     public static String getSpecificHtmlTextValue(DataPointVO point, double value) {
+        if (point == null)
+            return "-";
         return getHtmlTextValue(point, new NumericValue(value), TextRenderer.HINT_SPECIFIC);
     }
 
     private static String getHtmlTextValue(DataPointVO point, MangoValue value, int hint) {
+        if (point == null)
+            return "-";
         String text = point.getTextRenderer().getText(value, hint);
         String colour = point.getTextRenderer().getColour(value);
-        return getHtml(colour, text);
+        return getHtml(colour, text, point.getPointLocator().getDataTypeId() == DataTypes.ALPHANUMERIC);
     }
 
-    private static String getHtml(String colour, String text) {
+    private static String getHtml(String colour, String text, boolean detectOverflow) {
         String result;
 
-        if (text != null && text.length() > 30) {
+        if (text != null && detectOverflow && text.length() > 30) {
             text = encodeDQuot(text);
             if (StringUtils.isEmpty(colour))
                 result = "<input type='text' readonly='readonly' class='ovrflw' value=\"" + text + "\"/>";
@@ -99,5 +113,13 @@ public class Functions {
         String result = Pattern.compile("<script", Pattern.CASE_INSENSITIVE).matcher(s).replaceAll("&lt;script");
         result = Pattern.compile("</script", Pattern.CASE_INSENSITIVE).matcher(result).replaceAll("&lt;/script");
         return result;
+    }
+
+    public static String envString(String key, String defaultValue) {
+        return Common.getEnvironmentProfile().getString(key, defaultValue);
+    }
+
+    public static boolean envBoolean(String key, boolean defaultValue) {
+        return Common.getEnvironmentProfile().getBoolean(key, defaultValue);
     }
 }

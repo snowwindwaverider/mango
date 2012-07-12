@@ -34,11 +34,10 @@ import com.serotonin.mango.Common;
 import com.serotonin.mango.db.dao.MailingListDao;
 import com.serotonin.mango.db.dao.UserDao;
 import com.serotonin.mango.rt.maint.work.EmailWorkItem;
-import com.serotonin.mango.util.freemarker.MangoEmailContent;
-import com.serotonin.mango.util.freemarker.MessageFormatDirective;
 import com.serotonin.mango.vo.mailingList.EmailRecipient;
 import com.serotonin.mango.vo.mailingList.MailingList;
 import com.serotonin.mango.web.dwr.beans.RecipientListEntryBean;
+import com.serotonin.mango.web.email.MangoEmailContent;
 import com.serotonin.util.StringUtils;
 import com.serotonin.web.dwr.DwrResponseI18n;
 import com.serotonin.web.i18n.I18NUtils;
@@ -108,9 +107,9 @@ public class MailingListsDwr extends BaseDwr {
             ResourceBundle bundle = Common.getBundle();
             Map<String, Object> model = new HashMap<String, Object>();
             model.put("message", new LocalizableMessage("ftl.userTestEmail", ml.getName()));
-            model.put("fmt", new MessageFormatDirective(bundle));
-            EmailWorkItem.queueEmail(toAddrs, I18NUtils.getMessage(bundle, "ftl.testEmail"), new MangoEmailContent(
-                    "testEmail", model, Common.UTF8));
+            MangoEmailContent cnt = new MangoEmailContent("ftl.testEmail", model, bundle, I18NUtils.getMessage(bundle,
+                    "ftl.testEmail"), Common.UTF8);
+            EmailWorkItem.queueEmail(toAddrs, cnt);
         }
         catch (Exception e) {
             response.addGenericMessage("mailingLists.testerror", e.getMessage());

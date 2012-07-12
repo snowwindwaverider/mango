@@ -18,19 +18,26 @@
  */
 package com.serotonin.mango.db.dao;
 
+import java.awt.Color;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 
+import com.serotonin.InvalidArgumentException;
+import com.serotonin.ShouldNeverHappenException;
 import com.serotonin.db.spring.ExtendedJdbcTemplate;
 import com.serotonin.mango.Common;
 import com.serotonin.mango.rt.event.AlarmLevels;
+import com.serotonin.util.ColorUtils;
 
 public class SystemSettingsDao extends BaseDao {
     // Database schema version
     public static final String DATABASE_SCHEMA_VERSION = "databaseSchemaVersion";
+
+    // Servlet context name
+    public static final String SERVLET_CONTEXT_PATH = "servletContextPath";
 
     // Email settings
     public static final String EMAIL_SMTP_HOST = "emailSmtpHost";
@@ -85,23 +92,42 @@ public class SystemSettingsDao extends BaseDao {
     public static final String FUTURE_DATE_LIMIT_PERIOD_TYPE = "futureDateLimitPeriodType";
     public static final String INSTANCE_DESCRIPTION = "instanceDescription";
 
-    public String getValue(String key) {
+    // Colours
+    public static final String CHART_BACKGROUND_COLOUR = "chartBackgroundColour";
+    public static final String PLOT_BACKGROUND_COLOUR = "plotBackgroundColour";
+    public static final String PLOT_GRIDLINE_COLOUR = "plotGridlineColour";
+
+    // Value cache
+    private static final Map<String, String> cache = new HashMap<String, String>();
+
+    public static String getValue(String key) {
         return getValue(key, (String) DEFAULT_VALUES.get(key));
     }
 
-    public String getValue(String key, String defaultValue) {
-        return queryForObject("select settingValue from systemSettings where settingName=?", new Object[] { key },
-                String.class, defaultValue);
+    public static String getValue(String key, String defaultValue) {
+        String result = cache.get(key);
+        if (result == null) {
+            if (!cache.containsKey(key)) {
+                result = new BaseDao().queryForObject("select settingValue from systemSettings where settingName=?",
+                        new Object[] { key }, String.class, null);
+                cache.put(key, result);
+                if (result == null)
+                    result = defaultValue;
+            }
+            else
+                result = defaultValue;
+        }
+        return result;
     }
 
-    public int getIntValue(String key) {
+    public static int getIntValue(String key) {
         Integer defaultValue = (Integer) DEFAULT_VALUES.get(key);
         if (defaultValue == null)
             return getIntValue(key, 0);
         return getIntValue(key, defaultValue);
     }
 
-    public int getIntValue(String key, int defaultValue) {
+    public static int getIntValue(String key, int defaultValue) {
         String value = getValue(key, null);
         if (value == null)
             return defaultValue;
@@ -113,11 +139,11 @@ public class SystemSettingsDao extends BaseDao {
         }
     }
 
-    public boolean getBooleanValue(String key) {
+    public static boolean getBooleanValue(String key) {
         return getBooleanValue(key, false);
     }
 
-    public boolean getBooleanValue(String key, boolean defaultValue) {
+    public static boolean getBooleanValue(String key, boolean defaultValue) {
         String value = getValue(key, null);
         if (value == null)
             return defaultValue;
@@ -125,6 +151,10 @@ public class SystemSettingsDao extends BaseDao {
     }
 
     public void setValue(final String key, final String value) {
+        // Update the cache
+        cache.put(key, value);
+
+        // Update the database
         final ExtendedJdbcTemplate ejt2 = ejt;
         getTransactionTemplate().execute(new TransactionCallbackWithoutResult() {
             @Override
@@ -148,30 +178,43 @@ public class SystemSettingsDao extends BaseDao {
     }
 
     public void removeValue(String key) {
+        // Remove the value from the cache
+        cache.remove(key);
+
         // Reset the cached values too.
         FUTURE_DATE_LIMIT = -1;
-        INSTANCE_DESCRIPTION_CACHE = null;
+
         ejt.update("delete from systemSettings where settingName=?", new Object[] { key });
     }
 
-    public long getFutureDateLimit() {
-        if (FUTURE_DATE_LIMIT == -1)
+    public static long getFutureDateLimit() {
+        if (FUTURE_DATE_LIMIT == -1) {
             FUTURE_DATE_LIMIT = Common.getMillis(getIntValue(FUTURE_DATE_LIMIT_PERIOD_TYPE),
                     getIntValue(FUTURE_DATE_LIMIT_PERIODS));
+        }
         return FUTURE_DATE_LIMIT;
     }
 
-    public static String getInstanceDescription() {
-        if (INSTANCE_DESCRIPTION_CACHE == null)
-            INSTANCE_DESCRIPTION_CACHE = new SystemSettingsDao().getValue(INSTANCE_DESCRIPTION);
-        return INSTANCE_DESCRIPTION_CACHE;
+    public static Color getColour(String key) {
+        try {
+            return ColorUtils.toColor(getValue(key));
+        }
+        catch (InvalidArgumentException e) {
+            // Should never happen. Just use the default.
+            try {
+                return ColorUtils.toColor((String) DEFAULT_VALUES.get(key));
+            }
+            catch (InvalidArgumentException e1) {
+                // This should definitely never happen
+                throw new ShouldNeverHappenException(e1);
+            }
+        }
     }
 
     /**
      * Special caching for the future dated values property, which needs high performance.
      */
     private static long FUTURE_DATE_LIMIT = -1;
-    private static String INSTANCE_DESCRIPTION_CACHE = null;
 
     private static final Map<String, Object> DEFAULT_VALUES = new HashMap<String, Object>();
     static {
@@ -211,5 +254,9 @@ public class SystemSettingsDao extends BaseDao {
         DEFAULT_VALUES.put(FUTURE_DATE_LIMIT_PERIODS, 24);
         DEFAULT_VALUES.put(FUTURE_DATE_LIMIT_PERIOD_TYPE, Common.TimePeriods.HOURS);
         DEFAULT_VALUES.put(INSTANCE_DESCRIPTION, "My Mango M2M");
+
+        DEFAULT_VALUES.put(CHART_BACKGROUND_COLOUR, "white");
+        DEFAULT_VALUES.put(PLOT_BACKGROUND_COLOUR, "white");
+        DEFAULT_VALUES.put(PLOT_GRIDLINE_COLOUR, "silver");
     }
 }

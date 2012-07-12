@@ -68,6 +68,15 @@ public class PointFolder implements JsonSerializable {
         points.add(point);
     }
 
+    public void removeDataPoint(int dataPointId) {
+        for (int i = 0; i < points.size(); i++) {
+            if (points.get(i).getKey() == dataPointId) {
+                points.remove(i);
+                return;
+            }
+        }
+    }
+
     public int getId() {
         return id;
     }
@@ -100,10 +109,48 @@ public class PointFolder implements JsonSerializable {
         this.subfolders = subfolders;
     }
 
+    boolean findPoint(List<PointFolder> path, int pointId) {
+        boolean found = false;
+        for (IntValuePair point : points) {
+            if (point.getKey() == pointId) {
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            for (PointFolder subfolder : subfolders) {
+                found = subfolder.findPoint(path, pointId);
+                if (found)
+                    break;
+            }
+        }
+
+        if (found)
+            path.add(this);
+
+        return found;
+    }
+
+    void copyFoldersFrom(PointFolder that) {
+        for (PointFolder thatSub : that.subfolders) {
+            PointFolder thisSub = new PointFolder(thatSub.getId(), thatSub.getName());
+            thisSub.copyFoldersFrom(thatSub);
+            subfolders.add(thisSub);
+        }
+    }
+
+    public PointFolder getSubfolder(String name) {
+        for (PointFolder subfolder : subfolders) {
+            if (subfolder.name.equals(name))
+                return subfolder;
+        }
+        return null;
+    }
+
     //
-    // /
-    // / Serialization
-    // /
+    //
+    // Serialization
     //
     @Override
     public void jsonSerialize(Map<String, Object> map) {

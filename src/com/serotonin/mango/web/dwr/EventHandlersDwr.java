@@ -79,7 +79,7 @@ public class EventHandlersDwr extends BaseDwr {
         // Get the data points
         List<DataPointBean> allPoints = new ArrayList<DataPointBean>();
         List<EventSourceBean> dataPoints = new ArrayList<EventSourceBean>();
-        List<DataPointVO> dps = new DataPointDao().getDataPoints(DataPointExtendedNameComparator.instance);
+        List<DataPointVO> dps = new DataPointDao().getDataPoints(DataPointExtendedNameComparator.instance, true);
         for (DataPointVO dp : dps) {
             if (!Permissions.hasDataSourcePermission(user, dp.getDataSourceId()))
                 continue;
