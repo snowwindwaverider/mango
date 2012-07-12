@@ -643,7 +643,7 @@ public class RuntimeManager {
     //
     // Publishers
     //
-    private PublisherRT<?> getRunningPublisher(int publisherId) {
+    public PublisherRT<?> getRunningPublisher(int publisherId) {
         for (PublisherRT<?> publisher : runningPublishers) {
             if (publisher.getId() == publisherId)
                 return publisher;
@@ -782,7 +782,7 @@ public class RuntimeManager {
 
     public boolean isActiveMaintenanceEvent(int dataSourceId) {
         for (MaintenanceEventRT rt : maintenanceEvents) {
-            if (rt.getVo().getDataSourceId() == dataSourceId)
+            if (rt.getVo().getDataSourceId() == dataSourceId && rt.isEventActive())
                 return true;
         }
         return false;

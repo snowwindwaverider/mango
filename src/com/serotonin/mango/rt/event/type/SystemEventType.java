@@ -72,25 +72,24 @@ public class SystemEventType extends EventType {
     public static List<EventTypeVO> getSystemEventTypes() {
         if (systemEventTypes == null) {
             systemEventTypes = new ArrayList<EventTypeVO>();
-            SystemSettingsDao dao = new SystemSettingsDao();
 
-            addEventTypeVO(TYPE_SYSTEM_STARTUP, "event.system.startup", AlarmLevels.INFORMATION, dao);
-            addEventTypeVO(TYPE_SYSTEM_SHUTDOWN, "event.system.shutdown", AlarmLevels.INFORMATION, dao);
-            addEventTypeVO(TYPE_MAX_ALARM_LEVEL_CHANGED, "event.system.maxAlarmChanged", AlarmLevels.NONE, dao);
-            addEventTypeVO(TYPE_USER_LOGIN, "event.system.userLogin", AlarmLevels.INFORMATION, dao);
-            addEventTypeVO(TYPE_VERSION_CHECK, "event.system.versionCheck", AlarmLevels.INFORMATION, dao);
-            addEventTypeVO(TYPE_COMPOUND_DETECTOR_FAILURE, "event.system.compound", AlarmLevels.URGENT, dao);
-            addEventTypeVO(TYPE_SET_POINT_HANDLER_FAILURE, "event.system.setPoint", AlarmLevels.URGENT, dao);
-            addEventTypeVO(TYPE_EMAIL_SEND_FAILURE, "event.system.email", AlarmLevels.INFORMATION, dao);
-            addEventTypeVO(TYPE_POINT_LINK_FAILURE, "event.system.pointLink", AlarmLevels.URGENT, dao);
-            addEventTypeVO(TYPE_PROCESS_FAILURE, "event.system.process", AlarmLevels.URGENT, dao);
+            addEventTypeVO(TYPE_SYSTEM_STARTUP, "event.system.startup", AlarmLevels.INFORMATION);
+            addEventTypeVO(TYPE_SYSTEM_SHUTDOWN, "event.system.shutdown", AlarmLevels.INFORMATION);
+            addEventTypeVO(TYPE_MAX_ALARM_LEVEL_CHANGED, "event.system.maxAlarmChanged", AlarmLevels.NONE);
+            addEventTypeVO(TYPE_USER_LOGIN, "event.system.userLogin", AlarmLevels.INFORMATION);
+            addEventTypeVO(TYPE_VERSION_CHECK, "event.system.versionCheck", AlarmLevels.INFORMATION);
+            addEventTypeVO(TYPE_COMPOUND_DETECTOR_FAILURE, "event.system.compound", AlarmLevels.URGENT);
+            addEventTypeVO(TYPE_SET_POINT_HANDLER_FAILURE, "event.system.setPoint", AlarmLevels.URGENT);
+            addEventTypeVO(TYPE_EMAIL_SEND_FAILURE, "event.system.email", AlarmLevels.INFORMATION);
+            addEventTypeVO(TYPE_POINT_LINK_FAILURE, "event.system.pointLink", AlarmLevels.URGENT);
+            addEventTypeVO(TYPE_PROCESS_FAILURE, "event.system.process", AlarmLevels.URGENT);
         }
         return systemEventTypes;
     }
 
-    private static void addEventTypeVO(int type, String key, int defaultAlarmLevel, SystemSettingsDao systemSettingsDao) {
+    private static void addEventTypeVO(int type, String key, int defaultAlarmLevel) {
         systemEventTypes.add(new EventTypeVO(EventType.EventSources.SYSTEM, type, 0, new LocalizableMessage(key),
-                systemSettingsDao.getIntValue(SYSTEM_SETTINGS_PREFIX + type, defaultAlarmLevel)));
+                SystemSettingsDao.getIntValue(SYSTEM_SETTINGS_PREFIX + type, defaultAlarmLevel)));
     }
 
     public static EventTypeVO getEventType(int type) {
@@ -112,7 +111,7 @@ public class SystemEventType extends EventType {
     public static void raiseEvent(SystemEventType type, long time, boolean rtn, LocalizableMessage message) {
         EventTypeVO vo = getEventType(type.getSystemEventTypeId());
         int alarmLevel = vo.getAlarmLevel();
-        Common.ctx.getEventManager().raiseEvent(type, time, rtn, alarmLevel, message);
+        Common.ctx.getEventManager().raiseEvent(type, time, rtn, alarmLevel, message, null);
     }
 
     public static void returnToNormal(SystemEventType type, long time) {

@@ -21,6 +21,7 @@ package com.serotonin.mango.rt;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -60,7 +61,8 @@ public class EventManager implements ILifecycle {
     //
     // Basic event management.
     //
-    public void raiseEvent(EventType type, long time, boolean rtnApplicable, int alarmLevel, LocalizableMessage message) {
+    public void raiseEvent(EventType type, long time, boolean rtnApplicable, int alarmLevel,
+            LocalizableMessage message, Map<String, Object> context) {
         // Check if there is an event for this type already active.
         EventInstance dup = get(type);
         if (dup != null) {
@@ -93,7 +95,7 @@ public class EventManager implements ILifecycle {
         // Determine if the event should be suppressed.
         boolean suppressed = isSuppressed(type);
 
-        EventInstance evt = new EventInstance(type, time, rtnApplicable, alarmLevel, message);
+        EventInstance evt = new EventInstance(type, time, rtnApplicable, alarmLevel, message, context);
 
         if (!suppressed)
             setHandlers(evt);
@@ -127,7 +129,7 @@ public class EventManager implements ILifecycle {
             activeEvents.add(evt);
 
         if (suppressed)
-            eventDao.ackEvent(evt.getId(), 0, EventInstance.AlternateAcknowledgementSources.MAINTENANCE_MODE);
+            eventDao.ackEvent(evt.getId(), time, 0, EventInstance.AlternateAcknowledgementSources.MAINTENANCE_MODE);
         else {
             if (evt.isRtnApplicable()) {
                 if (alarmLevel > highestActiveAlarmLevel) {

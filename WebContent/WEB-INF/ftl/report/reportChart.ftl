@@ -181,7 +181,7 @@
           </#if>
           <#if point.chartData>
             <tr>
-              <td colspan="2"><img src="${inline}${point.chartPath}"/></td>
+              <td colspan="2"><a href="${inline}${point.chartPath}"><img src="${inline}${point.chartPath}" border="0"/></a></td>
             </tr>
           </#if>
         </table>
@@ -194,7 +194,7 @@
   
   <#if chartName??>
     <h2><@fmt key="reports.consolidated"/></h2>
-    <img src="${inline}${chartName}"/>
+    <a href="${inline}${chartName}"><img src="${inline}${chartName}" border="0"/></a>
   </#if>
   
   <#if includeEvents>

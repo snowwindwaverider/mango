@@ -27,6 +27,7 @@ import org.springframework.web.servlet.view.RedirectView;
 
 import com.serotonin.mango.Common;
 import com.serotonin.mango.vo.User;
+import com.serotonin.mango.web.integration.CrowdUtils;
 
 public class LogoutController extends AbstractController {
     private String redirectUrl;
@@ -39,9 +40,13 @@ public class LogoutController extends AbstractController {
     protected ModelAndView handleRequestInternal(HttpServletRequest request, HttpServletResponse response) {
         // Check if the user is logged in.
         User user = Common.getUser(request);
-        if (user != null)
+        if (user != null) {
             // The user is in fact logged in. Invalidate the session.
             request.getSession().invalidate();
+
+            if (CrowdUtils.isCrowdEnabled())
+                CrowdUtils.logout(request, response);
+        }
 
         // Regardless of what happened above, forward to the configured view.
         return new ModelAndView(new RedirectView(redirectUrl));

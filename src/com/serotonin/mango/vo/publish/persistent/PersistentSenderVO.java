@@ -58,6 +58,9 @@ public class PersistentSenderVO extends PublisherVO<PersistentPointVO> {
         eventTypes.add(new EventTypeVO(EventType.EventSources.PUBLISHER, getId(),
                 PersistentSenderRT.CONNECTION_LOST_EVENT, new LocalizableMessage("event.pb.persistent.connectionLost"),
                 AlarmLevels.URGENT));
+        eventTypes.add(new EventTypeVO(EventType.EventSources.PUBLISHER, getId(),
+                PersistentSenderRT.SYNC_COMPLETION_EVENT, new LocalizableMessage("event.pb.persistent.syncCompleted"),
+                AlarmLevels.NONE));
     }
 
     private static final ExportCodes EVENT_CODES = new ExportCodes();
@@ -67,6 +70,7 @@ public class PersistentSenderVO extends PublisherVO<PersistentPointVO> {
         EVENT_CODES.addElement(PersistentSenderRT.PROTOCOL_FAILURE_EVENT, "PROTOCOL_FAILURE_EVENT");
         EVENT_CODES.addElement(PersistentSenderRT.CONNECTION_ABORTED_EVENT, "CONNECTION_ABORTED_EVENT");
         EVENT_CODES.addElement(PersistentSenderRT.CONNECTION_LOST_EVENT, "CONNECTION_LOST_EVENT");
+        EVENT_CODES.addElement(PersistentSenderRT.SYNC_COMPLETION_EVENT, "SYNC_COMPLETION_EVENT");
     }
 
     public static final int SYNC_TYPE_NONE = 0;
@@ -113,6 +117,8 @@ public class PersistentSenderVO extends PublisherVO<PersistentPointVO> {
     private int port;
     @JsonRemoteProperty
     private String authorizationKey;
+    @JsonRemoteProperty
+    private String xidPrefix;
     private int syncType = SYNC_TYPE_DAILY;
 
     public String getHost() {
@@ -137,6 +143,14 @@ public class PersistentSenderVO extends PublisherVO<PersistentPointVO> {
 
     public void setAuthorizationKey(String authorizationKey) {
         this.authorizationKey = authorizationKey;
+    }
+
+    public String getXidPrefix() {
+        return xidPrefix;
+    }
+
+    public void setXidPrefix(String xidPrefix) {
+        this.xidPrefix = xidPrefix;
     }
 
     public int getSyncType() {
@@ -166,13 +180,14 @@ public class PersistentSenderVO extends PublisherVO<PersistentPointVO> {
     // /
     //
     private static final long serialVersionUID = -1;
-    private static final int version = 1;
+    private static final int version = 2;
 
     private void writeObject(ObjectOutputStream out) throws IOException {
         out.writeInt(version);
         SerializationHelper.writeSafeUTF(out, host);
         out.writeInt(port);
         SerializationHelper.writeSafeUTF(out, authorizationKey);
+        SerializationHelper.writeSafeUTF(out, xidPrefix);
         out.writeInt(syncType);
     }
 
@@ -184,6 +199,14 @@ public class PersistentSenderVO extends PublisherVO<PersistentPointVO> {
             host = SerializationHelper.readSafeUTF(in);
             port = in.readInt();
             authorizationKey = SerializationHelper.readSafeUTF(in);
+            xidPrefix = "";
+            syncType = in.readInt();
+        }
+        else if (ver == 2) {
+            host = SerializationHelper.readSafeUTF(in);
+            port = in.readInt();
+            authorizationKey = SerializationHelper.readSafeUTF(in);
+            xidPrefix = SerializationHelper.readSafeUTF(in);
             syncType = in.readInt();
         }
     }

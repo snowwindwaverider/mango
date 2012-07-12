@@ -38,18 +38,16 @@ abstract public class DifferenceDetectorRT extends TimeDelayedEventDetectorRT {
     }
 
     synchronized protected void pointData() {
-        lastChange = System.currentTimeMillis();
         if (!eventActive)
-            unscheduleJob();
+            unscheduleJob(System.currentTimeMillis());
         else
             setEventActive(false);
-        scheduleJob(lastChange);
+        lastChange = System.currentTimeMillis();
+        scheduleJob();
     }
 
     @Override
-    public void initialize() {
-        super.initialize();
-
+    public void initializeState() {
         // Get historical data for the point out of the database.
         int pointId = vo.njbGetDataPoint().getId();
         PointValueTime latest = Common.ctx.getRuntimeManager().getDataPoint(pointId).getPointValue();
@@ -64,7 +62,12 @@ abstract public class DifferenceDetectorRT extends TimeDelayedEventDetectorRT {
             setEventActive(true);
         else
             // Otherwise, set the timeout.
-            scheduleJob(lastChange);
+            scheduleJob();
+    }
+
+    @Override
+    protected long getConditionActiveTime() {
+        return lastChange;
     }
 
     @Override
@@ -72,7 +75,7 @@ abstract public class DifferenceDetectorRT extends TimeDelayedEventDetectorRT {
         eventActive = b;
         if (eventActive)
             // Raise the event.
-            raiseEvent(lastChange + getDurationMS());
+            raiseEvent(lastChange + getDurationMS(), createEventContext());
         else
             // Deactivate the event.
             returnToNormal(lastChange);

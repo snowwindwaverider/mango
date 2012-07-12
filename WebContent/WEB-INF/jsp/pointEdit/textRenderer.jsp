@@ -185,35 +185,36 @@
           // Figure out which fields to populate with data.
           <c:choose>
             <c:when test='${form.textRenderer.typeName == "textRendererAnalog"}'>
-              $set("textRendererAnalogFormat", "${form.textRenderer.format}");
-              $set("textRendererAnalogSuffix", "${form.textRenderer.suffix}");
+              $set("textRendererAnalogFormat", "${sst:dquotEncode(form.textRenderer.format)}");
+              $set("textRendererAnalogSuffix", "${sst:dquotEncode(form.textRenderer.suffix)}");
             </c:when>
             <c:when test='${form.textRenderer.typeName == "textRendererBinary"}'>
-              $set("textRendererBinaryZero", "${form.textRenderer.zeroLabel}");
-              textRendererEditor.handlerBinaryZeroColour("${form.textRenderer.zeroColour}");
-              $set("textRendererBinaryOne", "${form.textRenderer.oneLabel}");
-              textRendererEditor.handlerBinaryOneColour("${form.textRenderer.oneColour}");
+              $set("textRendererBinaryZero", "${sst:dquotEncode(form.textRenderer.zeroLabel)}");
+              textRendererEditor.handlerBinaryZeroColour("${sst:dquotEncode(form.textRenderer.zeroColour)}");
+              $set("textRendererBinaryOne", "${sst:dquotEncode(form.textRenderer.oneLabel)}");
+              textRendererEditor.handlerBinaryOneColour("${sst:dquotEncode(form.textRenderer.oneColour)}");
             </c:when>
             <c:when test='${form.textRenderer.typeName == "textRendererMultistate"}'>
               <c:forEach items="${form.textRenderer.multistateValues}" var="msValue">
-                textRendererEditor.addMultistateValue("${msValue.key}", "${msValue.text}", "${msValue.colour}");
+                textRendererEditor.addMultistateValue("${sst:dquotEncode(msValue.key)}",
+                		"${sst:dquotEncode(msValue.text)}", "${sst:dquotEncode(msValue.colour)}");
               </c:forEach>
             </c:when>
             <c:when test='${form.textRenderer.typeName == "textRendererNone"}'>
             </c:when>
             <c:when test='${form.textRenderer.typeName == "textRendererPlain"}'>
-              $set("textRendererPlainSuffix", "${form.textRenderer.suffix}");
+              $set("textRendererPlainSuffix", "${sst:dquotEncode(form.textRenderer.suffix)}");
             </c:when>
             <c:when test='${form.textRenderer.typeName == "textRendererRange"}'>
-              $set("textRendererRangeFormat", "${form.textRenderer.format}");
+              $set("textRendererRangeFormat", "${sst:dquotEncode(form.textRenderer.format)}");
               <c:forEach items="${form.textRenderer.rangeValues}" var="rgValue">
-                textRendererEditor.addRangeValue("${rgValue.from}", "${rgValue.to}", "${rgValue.text}",
-                        "${rgValue.colour}");
+                textRendererEditor.addRangeValue("${rgValue.from}", "${rgValue.to}", "${sst:dquotEncode(rgValue.text)}",
+                        "${sst:dquotEncode(rgValue.colour)}");
               </c:forEach>
             </c:when>
             <c:when test='${form.textRenderer.typeName == "textRendererTime"}'>
-              $set("textRendererTimeFormat", "${form.textRenderer.format}");
-              $set("textRendererTimeConversionExponent", "${form.textRenderer.conversionExponent}");
+              $set("textRendererTimeFormat", "${sst:dquotEncode(form.textRenderer.format)}");
+              $set("textRendererTimeConversionExponent", "${sst:dquotEncode(form.textRenderer.conversionExponent)}");
             </c:when>
             <c:otherwise>
               dojo.debug("Unknown text renderer: ${form.textRenderer.typeName}");

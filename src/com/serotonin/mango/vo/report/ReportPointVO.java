@@ -10,6 +10,7 @@ import com.serotonin.util.SerializationHelper;
 public class ReportPointVO implements Serializable {
     private int pointId;
     private String colour;
+    private boolean consolidatedChart;
 
     public int getPointId() {
         return pointId;
@@ -27,18 +28,27 @@ public class ReportPointVO implements Serializable {
         this.colour = colour;
     }
 
+    public boolean isConsolidatedChart() {
+        return consolidatedChart;
+    }
+
+    public void setConsolidatedChart(boolean consolidatedChart) {
+        this.consolidatedChart = consolidatedChart;
+    }
+
     //
     //
     // Serialization
     //
     private static final long serialVersionUID = -1;
-    private static final int version = 1;
+    private static final int version = 2;
 
     private void writeObject(ObjectOutputStream out) throws IOException {
         out.writeInt(version);
 
         out.writeInt(pointId);
         SerializationHelper.writeSafeUTF(out, colour);
+        out.writeBoolean(consolidatedChart);
     }
 
     private void readObject(ObjectInputStream in) throws IOException {
@@ -48,6 +58,12 @@ public class ReportPointVO implements Serializable {
         if (ver == 1) {
             pointId = in.readInt();
             colour = SerializationHelper.readSafeUTF(in);
+            consolidatedChart = true;
+        }
+        else if (ver == 2) {
+            pointId = in.readInt();
+            colour = SerializationHelper.readSafeUTF(in);
+            consolidatedChart = in.readBoolean();
         }
     }
 }

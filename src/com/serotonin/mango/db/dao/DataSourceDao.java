@@ -18,6 +18,8 @@
  */
 package com.serotonin.mango.db.dao;
 
+import java.io.Serializable;
+import java.sql.Blob;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -27,11 +29,13 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.ResourceBundle;
 
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 
 import com.serotonin.db.spring.ExtendedJdbcTemplate;
+import com.serotonin.db.spring.GenericResultSetExtractor;
 import com.serotonin.db.spring.GenericRowMapper;
 import com.serotonin.db.spring.GenericTransactionCallback;
 import com.serotonin.mango.Common;
@@ -118,12 +122,14 @@ public class DataSourceDao extends BaseDao {
     public void deleteDataSource(final int dataSourceId) {
         DataSourceVO<?> vo = getDataSource(dataSourceId);
         final ExtendedJdbcTemplate ejt2 = ejt;
+
+        new DataPointDao().deleteDataPoints(dataSourceId);
+
         if (vo != null) {
             getTransactionTemplate().execute(new TransactionCallbackWithoutResult() {
                 @Override
                 protected void doInTransactionWithoutResult(TransactionStatus status) {
                     new MaintenanceEventDao().deleteMaintenanceEventsForDataSource(dataSourceId);
-                    new DataPointDao().deleteDataPoints(dataSourceId);
                     ejt2.update("delete from eventHandlers where eventTypeId=" + EventType.EventSources.DATA_SOURCE
                             + " and eventTypeRef1=?", new Object[] { dataSourceId });
                     ejt2.update("delete from dataSourceUsers where dataSourceId=?", new Object[] { dataSourceId });
@@ -198,5 +204,27 @@ public class DataSourceDao extends BaseDao {
                 return dataSourceCopy.getId();
             }
         });
+    }
+
+    public Object getPersistentData(int id) {
+        return query("select rtdata from dataSources where id=?", new Object[] { id },
+                new GenericResultSetExtractor<Serializable>() {
+                    @Override
+                    public Serializable extractData(ResultSet rs) throws SQLException, DataAccessException {
+                        if (!rs.next())
+                            return null;
+
+                        Blob blob = rs.getBlob(1);
+                        if (blob == null)
+                            return null;
+
+                        return (Serializable) SerializationHelper.readObjectInContext(blob.getBinaryStream());
+                    }
+                });
+    }
+
+    public void savePersistentData(int id, Object data) {
+        ejt.update("update dataSources set rtdata=? where id=?", new Object[] { SerializationHelper.writeObject(data),
+                id }, new int[] { Types.BLOB, Types.INTEGER });
     }
 }

@@ -58,6 +58,7 @@
       mango.share.dwr = WatchListDwr;
       var owner;
       var pointNames = {};
+      var watchlistChangeId = 0;
       
       function init() {
           WatchListDwr.init(function(data) {
@@ -214,19 +215,26 @@
           for (var i=0; i<rows.length; i++)
               removeFromWatchListImpl(rows[i].id.substring(1));
           
-          WatchListDwr.setSelectedWatchList($get("watchListSelect"), displayWatchList);
+          watchlistChangeId++;
+          var id = watchlistChangeId;
+          WatchListDwr.setSelectedWatchList($get("watchListSelect"), function(data) {
+        	  if (id == watchlistChangeId)
+                  displayWatchList(data);
+          });
       }
       
-      function addWatchList() {
-          WatchListDwr.addNewWatchList(addWatchListCB);
-      }
-      
-      function addWatchListCB(watchListData) {
-          var wlselect = $("watchListSelect");
-          wlselect.options[wlselect.options.length] = new Option(watchListData.value, watchListData.key);
-          $set(wlselect, watchListData.key);
-          watchListChanged();
-          maybeDisplayDeleteImg();
+      function addWatchList(copy) {
+    	  var copyId = ${NEW_ID};
+    	  if (copy)
+              copyId = $get("watchListSelect");
+    	  
+          WatchListDwr.addNewWatchList(copyId, function(watchListData) {
+              var wlselect = $("watchListSelect");
+              wlselect.options[wlselect.options.length] = new Option(watchListData.value, watchListData.key);
+              $set(wlselect, watchListData.key);
+              watchListChanged();
+              maybeDisplayDeleteImg();
+          });
       }
       
       function deleteWatchList() {
@@ -404,9 +412,10 @@
       function getImageChart() {
           var width = dojo.html.getContentBox($("imageChartDiv")).width - 20;
           startImageFader($("imageChartImg"));
-          WatchListDwr.getImageChartData($get("fromYear"), $get("fromMonth"), $get("fromDay"), $get("fromHour"),
-                  $get("fromMinute"), $get("fromNone"), $get("toYear"), $get("toMonth"), $get("toDay"), $get("toHour"),
-                  $get("toMinute"), $get("toNone"), width, 350, function(data) {
+          WatchListDwr.getImageChartData(getChartPointList(), $get("fromYear"), $get("fromMonth"), $get("fromDay"), 
+        		  $get("fromHour"), $get("fromMinute"), $get("fromSecond"), $get("fromNone"), $get("toYear"), 
+        		  $get("toMonth"), $get("toDay"), $get("toHour"), $get("toMinute"), $get("toSecond"), $get("toNone"), 
+        		  width, 350, function(data) {
               $("imageChartDiv").innerHTML = data;
               stopImageFader($("imageChartImg"));
               
@@ -414,6 +423,38 @@
               // make sure the rendering gets done.
               setTimeout('dojo.widget.manager.getWidgetById("splitContainer").onResized()', 2000);
           });
+      }
+      
+      function getChartData() {
+    	  var pointIds = getChartPointList();
+    	  if (pointIds.length == 0)
+    		  alert("<fmt:message key="watchlist.noExportables"/>");
+    	  else {
+              startImageFader($("chartDataImg"));
+              WatchListDwr.getChartData(getChartPointList(), $get("fromYear"), $get("fromMonth"), $get("fromDay"), 
+                      $get("fromHour"), $get("fromMinute"), $get("fromSecond"), $get("fromNone"), $get("toYear"), 
+                      $get("toMonth"), $get("toDay"), $get("toHour"), $get("toMinute"), $get("toSecond"), $get("toNone"), 
+                      function(data) {
+                  stopImageFader($("chartDataImg"));
+                  window.location = "chartExport/watchListData.csv";
+              });
+    	  }
+      }
+      
+      function getChartPointList() {
+          var pointIds = $get("chartCB");
+          for (var i=pointIds.length-1; i>=0; i--) {
+              if (pointIds[i] == "_TEMPLATE_") {
+                  pointIds.splice(i, 1);
+              }
+          }
+          return pointIds;
+      }
+      
+      //
+      // Create report
+      function createReport() {
+          window.location = "reports.shtm?wlid="+ $get("watchListSelect");
       }
     </script>
     
@@ -457,9 +498,11 @@
                   </div>
                 </div>
                 
-                <tag:img png="add" onclick="addWatchList()" title="watchlist.addNewList" onmouseover="closeLayers();"/>
+                <tag:img png="copy" onclick="addWatchList(true)" title="watchlist.copyList" onmouseover="closeLayers();"/>
+                <tag:img png="add" onclick="addWatchList(false)" title="watchlist.addNewList" onmouseover="closeLayers();"/>
                 <tag:img png="delete" id="watchListDeleteImg" onclick="deleteWatchList()" title="watchlist.deleteList"
                         style="display:none;" onmouseover="closeLayers();"/>
+                <tag:img png="report_add" onclick="createReport()" title="watchlist.createReport" onmouseover="closeLayers();"/>
               </td>
             </tr>
           </table>
@@ -490,7 +533,9 @@
                   <td id="p_TEMPLATE_Name" style="font-weight:bold"></td>
                   <td id="p_TEMPLATE_Value" align="center"><img src="images/hourglass.png"/></td>
                   <td id="p_TEMPLATE_Time" align="center"></td>
-                  <td width="54">
+                  <td style="width:1px; white-space:nowrap;">
+                    <input type="checkbox" name="chartCB" id="p_TEMPLATE_ChartCB" value="_TEMPLATE_" checked="checked"
+                            title="<fmt:message key="watchlist.consolidatedChart"/>"/>
                     <tag:img png="icon_comp" title="watchlist.pointDetails"
                             onclick="window.location='data_point_details.shtm?dpid='+ getMangoId(this)"/>
                     <tag:img png="arrow_up_thin" id="p_TEMPLATE_MoveUp" title="watchlist.moveUp" style="display:none;"
@@ -519,8 +564,12 @@
           <tr>
             <td class="smallTitle"><fmt:message key="watchlist.chart"/> <tag:help id="watchListCharts"/></td>
             <td align="right"><tag:dateRange/></td>
-            <td><tag:img id="imageChartImg" png="control_play_blue" title="watchlist.imageChartButton"
-                    onclick="getImageChart()"/></td>
+            <td>
+              <tag:img id="imageChartImg" png="control_play_blue" title="watchlist.imageChartButton"
+                      onclick="getImageChart()"/>
+              <tag:img id="chartDataImg" png="bullet_down" title="watchlist.chartDataButton"
+                      onclick="getChartData()"/>
+            </td>
           </tr>
           <tr><td colspan="3" id="imageChartDiv"></td></tr>
         </table>

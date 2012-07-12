@@ -21,6 +21,7 @@ package com.serotonin.mango.rt.dataSource.meta;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import com.serotonin.mango.Common;
 import com.serotonin.mango.rt.dataImage.DataPointRT;
 import com.serotonin.mango.rt.dataImage.PointValueTime;
 import com.serotonin.mango.rt.dataImage.SetPointSource;
@@ -45,7 +46,7 @@ public class MetaDataSourceRT extends DataSourceRT {
 
     @Override
     public void setPointValue(DataPointRT dataPoint, PointValueTime valueTime, SetPointSource source) {
-        // Point setting is not available for this data source.
+        dataPoint.setPointValue(valueTime, source);
     }
 
     @Override
@@ -55,7 +56,7 @@ public class MetaDataSourceRT extends DataSourceRT {
 
             MetaPointLocatorRT locator = dataPoint.getPointLocator();
             points.add(dataPoint);
-            locator.initialize(this, dataPoint);
+            locator.initialize(Common.timer, this, dataPoint);
             checkForDisabledPoints();
         }
     }

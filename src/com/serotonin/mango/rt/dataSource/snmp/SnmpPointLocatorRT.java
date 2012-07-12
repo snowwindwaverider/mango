@@ -18,6 +18,8 @@
  */
 package com.serotonin.mango.rt.dataSource.snmp;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.snmp4j.smi.Counter32;
 import org.snmp4j.smi.Counter64;
 import org.snmp4j.smi.Gauge32;
@@ -45,6 +47,8 @@ import com.serotonin.util.StringUtils;
  * 
  */
 public class SnmpPointLocatorRT extends PointLocatorRT {
+    private static final Log LOG = LogFactory.getLog(SnmpPointLocatorRT.class);
+
     private final SnmpPointLocatorVO vo;
     private final OID oid;
 
@@ -104,8 +108,9 @@ public class SnmpPointLocatorRT extends PointLocatorRT {
                 return new Integer32(value.getIntegerValue());
             if (value instanceof BinaryValue)
                 return new Integer32(value.getBooleanValue() ? 1 : 0);
-            throw new ShouldNeverHappenException("Can't convert value '" + value + "' (" + value.getDataType()
-                    + ") to Integer32");
+
+            LOG.warn("Can't convert value '" + value + "' (" + value.getDataType() + ") to Integer32");
+            return new Integer32(0);
 
         case SnmpPointLocatorVO.SetTypes.OCTET_STRING:
             return new OctetString(DataTypes.valueToString(value));

@@ -76,6 +76,8 @@ public class MetaPointLocatorVO extends AbstractPointLocatorVO implements JsonSe
     @JsonRemoteProperty
     private String script;
     private int dataTypeId;
+    @JsonRemoteProperty
+    private boolean settable;
     private int updateEvent = UPDATE_EVENT_CONTEXT_UPDATE;
     @JsonRemoteProperty
     private String updateCronPattern;
@@ -88,10 +90,6 @@ public class MetaPointLocatorVO extends AbstractPointLocatorVO implements JsonSe
 
     public LocalizableMessage getConfigurationDescription() {
         return new LocalizableMessage("common.default", "'" + StringUtils.truncate(script, 40) + "'");
-    }
-
-    public boolean isSettable() {
-        return false;
     }
 
     public List<IntValuePair> getContext() {
@@ -124,6 +122,14 @@ public class MetaPointLocatorVO extends AbstractPointLocatorVO implements JsonSe
 
     public void setDataTypeId(int dataTypeId) {
         this.dataTypeId = dataTypeId;
+    }
+
+    public boolean isSettable() {
+        return settable;
+    }
+
+    public void setSettable(boolean settable) {
+        this.settable = settable;
     }
 
     public int getUpdateEvent() {
@@ -200,6 +206,7 @@ public class MetaPointLocatorVO extends AbstractPointLocatorVO implements JsonSe
     @Override
     public void addProperties(List<LocalizableMessage> list) {
         AuditEventType.addDataTypeMessage(list, "dsEdit.pointDataType", dataTypeId);
+        AuditEventType.addPropertyMessage(list, "dsEdit.settable", settable);
         AuditEventType.addPropertyMessage(list, "dsEdit.meta.scriptContext", contextToString());
         AuditEventType.addPropertyMessage(list, "dsEdit.meta.script", script);
         AuditEventType.addExportCodeMessage(list, "dsEdit.meta.event", UPDATE_EVENT_CODES, updateEvent);
@@ -212,6 +219,7 @@ public class MetaPointLocatorVO extends AbstractPointLocatorVO implements JsonSe
     public void addPropertyChanges(List<LocalizableMessage> list, Object o) {
         MetaPointLocatorVO from = (MetaPointLocatorVO) o;
         AuditEventType.maybeAddDataTypeChangeMessage(list, "dsEdit.pointDataType", from.dataTypeId, dataTypeId);
+        AuditEventType.maybeAddPropertyChangeMessage(list, "dsEdit.settable", from.settable, settable);
         if (!context.equals(context))
             AuditEventType.addPropertyChangeMessage(list, "dsEdit.meta.scriptContext", from.contextToString(),
                     contextToString());
@@ -245,18 +253,18 @@ public class MetaPointLocatorVO extends AbstractPointLocatorVO implements JsonSe
     }
 
     //
-    // /
-    // / Serialization
-    // /
+    //
+    // Serialization
     //
     private static final long serialVersionUID = -1;
-    private static final int version = 3;
+    private static final int version = 4;
 
     private void writeObject(ObjectOutputStream out) throws IOException {
         out.writeInt(version);
         out.writeObject(context);
         SerializationHelper.writeSafeUTF(out, script);
         out.writeInt(dataTypeId);
+        out.writeBoolean(settable);
         out.writeInt(updateEvent);
         SerializationHelper.writeSafeUTF(out, updateCronPattern);
         out.writeInt(executionDelaySeconds);
@@ -275,6 +283,7 @@ public class MetaPointLocatorVO extends AbstractPointLocatorVO implements JsonSe
 
             script = SerializationHelper.readSafeUTF(in);
             dataTypeId = in.readInt();
+            settable = false;
             updateEvent = in.readInt();
             updateCronPattern = "";
             executionDelaySeconds = in.readInt();
@@ -283,6 +292,7 @@ public class MetaPointLocatorVO extends AbstractPointLocatorVO implements JsonSe
             context = (List<IntValuePair>) in.readObject();
             script = SerializationHelper.readSafeUTF(in);
             dataTypeId = in.readInt();
+            settable = false;
             updateEvent = in.readInt();
             updateCronPattern = "";
             executionDelaySeconds = in.readInt();
@@ -291,6 +301,16 @@ public class MetaPointLocatorVO extends AbstractPointLocatorVO implements JsonSe
             context = (List<IntValuePair>) in.readObject();
             script = SerializationHelper.readSafeUTF(in);
             dataTypeId = in.readInt();
+            settable = false;
+            updateEvent = in.readInt();
+            updateCronPattern = SerializationHelper.readSafeUTF(in);
+            executionDelaySeconds = in.readInt();
+        }
+        else if (ver == 4) {
+            context = (List<IntValuePair>) in.readObject();
+            script = SerializationHelper.readSafeUTF(in);
+            dataTypeId = in.readInt();
+            settable = in.readBoolean();
             updateEvent = in.readInt();
             updateCronPattern = SerializationHelper.readSafeUTF(in);
             executionDelaySeconds = in.readInt();

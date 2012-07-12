@@ -216,11 +216,19 @@ public class Permissions {
     // / Report access
     //
     public static void ensureReportPermission(User user, ReportVO report) throws PermissionException {
+        if (user == null)
+            throw new PermissionException("User is null", user);
+        if (report == null)
+            throw new PermissionException("Report is null", user);
         if (report.getUserId() != user.getId())
             throw new PermissionException("User does not have permission to access the report", user);
     }
 
     public static void ensureReportInstancePermission(User user, ReportInstance instance) throws PermissionException {
+        if (user == null)
+            throw new PermissionException("User is null", user);
+        if (instance == null)
+            throw new PermissionException("Report instance is null", user);
         if (instance.getUserId() != user.getId())
             throw new PermissionException("User does not have permission to access the report instance", user);
     }

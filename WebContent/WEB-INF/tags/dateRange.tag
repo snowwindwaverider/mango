@@ -27,6 +27,8 @@
     <td><sst:select id="fromHour" value="${fromHour}"><tag:hourOptions sst="true"/></sst:select></td>
     <td>:</td>
     <td><sst:select id="fromMinute" value="${fromMinute}"><tag:minuteOptions sst="true"/></sst:select></td>
+    <td>:</td>
+    <td><sst:select id="fromSecond" value="${fromSecond}"><tag:secondOptions sst="true"/></sst:select></td>
     <td><input type="checkbox" name="fromNone" id="fromNone" onclick="updateDateRange()"/><label
             for="fromNone"><fmt:message key="common.inception"/></label></td>
   </tr>
@@ -39,6 +41,8 @@
     <td><sst:select id="toHour" value="${toHour}"><tag:hourOptions sst="true"/></sst:select></td>
     <td>:</td>
     <td><sst:select id="toMinute" value="${toMinute}"><tag:minuteOptions sst="true"/></sst:select></td>
+    <td>:</td>
+    <td><sst:select id="toSecond" value="${toSecond}"><tag:secondOptions sst="true"/></sst:select></td>
     <td><input type="checkbox" name="toNone" id="toNone" checked="checked" onclick="updateDateRange()"/><label
             for="toNone"><fmt:message key="common.latest"/></label></td>
   </tr>

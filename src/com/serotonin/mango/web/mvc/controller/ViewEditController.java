@@ -87,7 +87,6 @@ public class ViewEditController extends SimpleFormRedirectController {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     protected Map referenceData(HttpServletRequest request, Object command, Errors errors) {
         Map<String, Object> model = new HashMap<String, Object>();
         model.put("imageSets", Common.ctx.getImageSets());

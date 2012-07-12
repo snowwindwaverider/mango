@@ -18,6 +18,8 @@
  */
 package com.serotonin.mango.db.dao;
 
+import java.io.Serializable;
+import java.sql.Blob;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
@@ -25,10 +27,12 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
+import org.springframework.dao.DataAccessException;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 
 import com.serotonin.db.spring.ExtendedJdbcTemplate;
+import com.serotonin.db.spring.GenericResultSetExtractor;
 import com.serotonin.db.spring.GenericRowMapper;
 import com.serotonin.mango.Common;
 import com.serotonin.mango.rt.event.type.EventType;
@@ -109,5 +113,27 @@ public class PublisherDao extends BaseDao {
                 ejt2.update("delete from publishers where id=?", new Object[] { publisherId });
             }
         });
+    }
+
+    public Object getPersistentData(int id) {
+        return query("select rtdata from publishers where id=?", new Object[] { id },
+                new GenericResultSetExtractor<Serializable>() {
+                    @Override
+                    public Serializable extractData(ResultSet rs) throws SQLException, DataAccessException {
+                        if (!rs.next())
+                            return null;
+
+                        Blob blob = rs.getBlob(1);
+                        if (blob == null)
+                            return null;
+
+                        return (Serializable) SerializationHelper.readObjectInContext(blob.getBinaryStream());
+                    }
+                });
+    }
+
+    public void savePersistentData(int id, Object data) {
+        ejt.update("update publishers set rtdata=? where id=?", new Object[] { SerializationHelper.writeObject(data),
+                id }, new int[] { Types.BLOB, Types.INTEGER });
     }
 }

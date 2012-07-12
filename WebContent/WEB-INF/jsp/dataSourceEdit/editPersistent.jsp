@@ -41,26 +41,53 @@
       delete locator.dataTypeId;
       DataSourceEditDwr.savePersistentPointLocator(currentPoint.id, $get("xid"), $get("name"), locator, savePointCB);
   }
+  
+  function getRtStatus() {
+      setDisabled("getStatusBtn", true);
+      DataSourceEditDwr.getPersistentStatus(function(response) {
+          dwr.util.removeAllOptions("statusResults");
+          dwr.util.addOptions("statusResults", response.messages, "genericMessage");
+          setDisabled("getStatusBtn", false);
+      });
+  }
 </script>
 
 <c:set var="dsDesc"><fmt:message key="dsEdit.persistent.desc"/></c:set>
 <c:set var="dsHelpId" value="persistentDS"/>
 <%@ include file="/WEB-INF/jsp/dataSourceEdit/dsHead.jspf" %>
-  <tr>
-    <td class="formLabelRequired"><fmt:message key="dsEdit.persistent.port"/></td>
-    <td class="formField"><input id="port" type="text" value="${dataSource.port}"/></td>
-  </tr>
+        <tr>
+          <td class="formLabelRequired"><fmt:message key="dsEdit.persistent.port"/></td>
+          <td class="formField"><input id="port" type="text" value="${dataSource.port}"/></td>
+        </tr>
+        
+        <tr>
+          <td class="formLabelRequired"><fmt:message key="dsEdit.persistent.authorizationKey"/></td>
+          <td class="formField"><input id="authorizationKey" type="text" value="${dataSource.authorizationKey}"/></td>
+        </tr>
+        
+        <tr>
+          <td class="formLabelRequired"><fmt:message key="dsEdit.persistent.acceptPointUpdates"/></td>
+          <td class="formField"><sst:checkbox id="acceptPointUpdates" selectedValue="${dataSource.acceptPointUpdates}"/></td>
+        </tr>
+        
+      </table>
+      
+      <tag:dsEvents/>
+    </div>
+  </td>
   
-  <tr>
-    <td class="formLabelRequired"><fmt:message key="dsEdit.persistent.authorizationKey"/></td>
-    <td class="formField"><input id="authorizationKey" type="text" value="${dataSource.authorizationKey}"/></td>
-  </tr>
-  
-  <tr>
-    <td class="formLabelRequired"><fmt:message key="dsEdit.persistent.acceptPointUpdates"/></td>
-    <td class="formField"><sst:checkbox id="acceptPointUpdates" value="${dataSource.acceptPointUpdates}"/></td>
-  </tr>
-<%@ include file="/WEB-INF/jsp/dataSourceEdit/dsEventsFoot.jspf" %>
+  <td valign="top">
+    <div class="borderDiv marB">
+      <table>
+        <tr><td class="smallTitle"><fmt:message key="dsEdit.persistent.status"/></td></tr>
+        <tr>
+          <td align="center">
+            <input id="getStatusBtn" type="button" value="<fmt:message key="dsEdit.persistent.getStatus"/>" onclick="getRtStatus();"/>
+          </td>
+        </tr>
+        
+        <tr><td><ul id="statusResults" style="padding-left: 20px;"></ul></td></tr>
+<%@ include file="/WEB-INF/jsp/dataSourceEdit/dsFoot.jspf" %>
 
 <tag:pointList pointHelpId="persistentPP">
 </tag:pointList>

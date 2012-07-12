@@ -45,8 +45,13 @@ public class PointLinkDao extends BaseDao {
         return query(POINT_LINK_SELECT, new PointLinkRowMapper());
     }
 
+    public List<PointLinkVO> getPointLinksForPoint(int dataPointId) {
+        return query(POINT_LINK_SELECT + "where sourcePointId=? or targetPointId=?", new Object[] { dataPointId,
+                dataPointId }, new PointLinkRowMapper());
+    }
+
     public PointLinkVO getPointLink(int id) {
-        return queryForObject(POINT_LINK_SELECT + "where id=?", new Object[] { id }, new PointLinkRowMapper());
+        return queryForObject(POINT_LINK_SELECT + "where id=?", new Object[] { id }, new PointLinkRowMapper(), null);
     }
 
     public PointLinkVO getPointLink(String xid) {
@@ -91,8 +96,9 @@ public class PointLinkDao extends BaseDao {
     private void updatePointLink(PointLinkVO pl) {
         PointLinkVO old = getPointLink(pl.getId());
 
-        ejt.update(POINT_LINK_UPDATE, new Object[] { pl.getXid(), pl.getSourcePointId(), pl.getTargetPointId(),
-                pl.getScript(), pl.getEvent(), boolToChar(pl.isDisabled()), pl.getId() });
+        ejt.update(POINT_LINK_UPDATE,
+                new Object[] { pl.getXid(), pl.getSourcePointId(), pl.getTargetPointId(), pl.getScript(),
+                        pl.getEvent(), boolToChar(pl.isDisabled()), pl.getId() });
 
         AuditEventType.raiseChangedEvent(AuditEventType.TYPE_POINT_LINK, old, pl);
     }

@@ -186,4 +186,16 @@
     <function-class>com.serotonin.mango.web.taglib.Functions</function-class>
     <function-signature>String escapeScripts(java.lang.String)</function-signature>
   </function> 
+  
+  <function>
+    <name>envString</name>
+    <function-class>com.serotonin.mango.web.taglib.Functions</function-class>
+    <function-signature>String envString(java.lang.String, java.lang.String)</function-signature>
+  </function> 
+  
+  <function>
+    <name>envBoolean</name>
+    <function-class>com.serotonin.mango.web.taglib.Functions</function-class>
+    <function-signature>boolean envBoolean(java.lang.String, boolean)</function-signature>
+  </function> 
 </taglib>

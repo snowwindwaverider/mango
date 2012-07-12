@@ -94,6 +94,7 @@ create table dataSources (
   name nvarchar(40) not null,
   dataSourceType int not null,
   data image not null,
+  rtdata image,
   primary key (id)
 );
 alter table dataSources add constraint dataSourcesUn1 unique (xid);
@@ -396,6 +397,7 @@ create table reportInstancePoints (
   startValue nvarchar(4000),
   textRenderer image,
   colour nvarchar(6),
+  consolidatedChart char(1),
   primary key (id)
 );
 alter table reportInstancePoints add constraint reportInstancePointsFk1 foreign key (reportInstanceId) 
@@ -463,6 +465,7 @@ create table publishers (
   id int not null identity,
   xid nvarchar(50) not null,
   data image not null,
+  rtdata image,
   primary key (id)
 );
 alter table publishers add constraint publishersUn1 unique (xid);

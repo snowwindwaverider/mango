@@ -19,6 +19,7 @@
 package com.serotonin.mango.vo;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -46,6 +47,8 @@ import com.serotonin.mango.vo.permission.DataPointAccess;
 import com.serotonin.mango.vo.permission.Permissions;
 import com.serotonin.mango.vo.publish.PublishedPointVO;
 import com.serotonin.mango.vo.publish.PublisherVO;
+import com.serotonin.mango.web.dwr.beans.DataExportDefinition;
+import com.serotonin.mango.web.dwr.beans.EventExportDefinition;
 import com.serotonin.mango.web.dwr.beans.ImportTask;
 import com.serotonin.mango.web.dwr.beans.TestingUtility;
 import com.serotonin.util.StringUtils;
@@ -90,6 +93,9 @@ public class User implements SetPointSource, HttpSessionBindingListener, JsonSer
     private transient PublisherVO<? extends PublishedPointVO> editPublisher;
     private transient ImportTask importTask;
     private transient boolean muted = false;
+    private transient DataExportDefinition dataExportDefinition;
+    private transient EventExportDefinition eventExportDefinition;
+    private transient Map<String, Object> attributes = new HashMap<String, Object>();
 
     /**
      * Used for various display purposes.
@@ -349,6 +355,35 @@ public class User implements SetPointSource, HttpSessionBindingListener, JsonSer
 
     public void setReceiveOwnAuditEvents(boolean receiveOwnAuditEvents) {
         this.receiveOwnAuditEvents = receiveOwnAuditEvents;
+    }
+
+    public DataExportDefinition getDataExportDefinition() {
+        return dataExportDefinition;
+    }
+
+    public void setDataExportDefinition(DataExportDefinition dataExportDefinition) {
+        this.dataExportDefinition = dataExportDefinition;
+    }
+
+    public EventExportDefinition getEventExportDefinition() {
+        return eventExportDefinition;
+    }
+
+    public void setEventExportDefinition(EventExportDefinition eventExportDefinition) {
+        this.eventExportDefinition = eventExportDefinition;
+    }
+
+    public void setAttribute(String key, Object value) {
+        attributes.put(key, value);
+    }
+
+    public Object removeAttribute(String key) {
+        return attributes.remove(key);
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> T getAttribute(String key) {
+        return (T) attributes.get(key);
     }
 
     public void validate(DwrResponseI18n response) {

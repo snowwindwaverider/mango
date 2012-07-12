@@ -16,11 +16,12 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see http://www.gnu.org/licenses/.
 --%>
+<%@page import="com.serotonin.mango.Common"%>
 <%@ include file="/WEB-INF/jsp/include/tech.jsp" %>
 <%@page import="com.serotonin.mango.vo.UserComment"%>
 <%@page import="com.serotonin.mango.rt.event.type.EventType"%>
 <%@page import="com.serotonin.mango.web.dwr.EventsDwr"%>
-<tag:page dwr="EventsDwr">
+<tag:page dwr="EventsDwr" onload="init">
   <%@ include file="/WEB-INF/jsp/include/userComment.jsp" %>
   <style>
     .incrementControl { width: 2em; }
@@ -30,6 +31,15 @@
     mango.longPoll.pollRequest.pendingAlarms = true;
     dojo.requireLocalization("dojo.i18n.calendar", "gregorian", null, "de,en,es,fi,fr,ROOT,hu,it,ja,ko,nl,pt,pt-br,sv,zh,zh-cn,zh-hk,zh-tw");
     dojo.requireLocalization("dojo.i18n.calendar", "gregorianExtras", null, "ROOT,ja,zh");
+    
+    function init() {
+        EventsDwr.getDateRangeDefaults(<c:out value="<%= Common.TimePeriods.DAYS %>"/>, 1, function(data) { setDateRange(data); });
+
+        var x = dojo.widget.byId("datePicker");
+        x.hide();
+        x.setDate(x.today);
+        dojo.event.connect(x,'onValueChanged','jumpToDateClicked');
+    }
   
     function updatePendingAlarmsContent(content) {
         hide("hourglass");
@@ -50,7 +60,11 @@
         setDisabled("searchBtn", true);
         $set("searchMessage", "<fmt:message key="events.search.searching"/>");
         EventsDwr.search($get("eventId"), $get("eventSourceType"), $get("eventStatus"), $get("alarmLevel"),
-                $get("keywords"), page, date, function(results) {
+                $get("keywords"), $get("dateRangeType"), $get("relativeType"), $get("prevPeriodCount"), 
+                $get("prevPeriodType"), $get("pastPeriodCount"), $get("pastPeriodType"), $get("fromNone"), 
+                $get("fromYear"), $get("fromMonth"), $get("fromDay"), $get("fromHour"), $get("fromMinute"), 
+                $get("fromSecond"), $get("toNone"), $get("toYear"), $get("toMonth"), $get("toDay"), $get("toHour"), 
+                $get("toMinute"), $get("toSecond"), page, date, function(results) {
             $set("searchResults", results.data.content);
             setDisabled("searchBtn", false);
             $set("searchMessage", results.data.resultCount);
@@ -100,12 +114,49 @@
     	});
     }
 
-    dojo.addOnLoad(function() {
-        var x = dojo.widget.byId("datePicker");
-        x.hide();
-        x.setDate(x.today);
-        dojo.event.connect(x,'onValueChanged','jumpToDateClicked');
-    });
+    function updateDateRangeFields() {
+    	var dateRangeType = $get("dateRangeType");
+        if (dateRangeType == <c:out value="<%= EventsDwr.DATE_RANGE_TYPE_RELATIVE %>"/>) {
+    		show("dateRangeRelative");
+    		hide("dateRangeSpecific");
+    		
+            var relativeType = $get("relativeType");
+            if (relativeType == 1) {
+                setDisabled("prevPeriodCount", false);
+                setDisabled("prevPeriodType", false);
+                setDisabled("pastPeriodCount", true);
+                setDisabled("pastPeriodType", true);
+            }
+            else {
+                setDisabled("prevPeriodCount", true);
+                setDisabled("prevPeriodType", true);
+                setDisabled("pastPeriodCount", false);
+                setDisabled("pastPeriodType", false);
+            }
+    	}
+    	else if (dateRangeType == <c:out value="<%= EventsDwr.DATE_RANGE_TYPE_SPECIFIC %>"/>) {
+            hide("dateRangeRelative");
+            show("dateRangeSpecific");
+            updateDateRange();
+    	}
+    	else {
+            hide("dateRangeRelative");
+            hide("dateRangeSpecific");
+    	}
+    }
+    
+    function exportEvents() {
+        startImageFader($("exportEventsImg"));
+        EventsDwr.exportEvents($get("eventId"), $get("eventSourceType"), $get("eventStatus"), $get("alarmLevel"),
+                $get("keywords"), $get("dateRangeType"), $get("relativeType"), $get("prevPeriodCount"), 
+                $get("prevPeriodType"), $get("pastPeriodCount"), $get("pastPeriodType"), $get("fromNone"), 
+                $get("fromYear"), $get("fromMonth"), $get("fromDay"), $get("fromHour"), $get("fromMinute"), 
+                $get("fromSecond"), $get("toNone"), $get("toYear"), $get("toMonth"), $get("toDay"), $get("toHour"), 
+                $get("toMinute"), $get("toSecond"), function(data) {
+        	stopImageFader($("exportEventsImg"));
+            window.location = "eventExport/eventData.csv";
+        });
+    }
   </script>
   
   <div class="borderDiv marB" style="float:left;">
@@ -169,6 +220,54 @@
           <td class="formLabel"><fmt:message key="events.search.keywords"/></td>
           <td class="formField"><input id="keywords" type="text"/></td>
         </tr>
+        
+        <tr>
+          <td class="formLabel"><fmt:message key="events.search.dateRange"/></td>
+          <td class="formField">
+            <table>
+              <tr><td>
+                 <select id="dateRangeType" onchange="updateDateRangeFields()">
+                   <option value="<c:out value="<%= EventsDwr.DATE_RANGE_TYPE_NONE %>"/>"><fmt:message key="events.search.dateRange.none"/></option>
+                   <option value="<c:out value="<%= EventsDwr.DATE_RANGE_TYPE_RELATIVE %>"/>"><fmt:message key="events.search.dateRange.relative"/></option>
+                   <option value="<c:out value="<%= EventsDwr.DATE_RANGE_TYPE_SPECIFIC %>"/>"><fmt:message key="events.search.dateRange.specific"/></option>
+                 </select>
+              </td></tr>
+              <tr>
+                <td style="padding-left:40px;">
+                  <table id="dateRangeRelative" style="display: none;">
+                    <tr>
+                      <td valign="top"><input type="radio" name="relativeType" onchange="updateDateRangeFields()"
+                              id="relprev" value="<c:out value="<%= EventsDwr.RELATIVE_DATE_TYPE_PREVIOUS %>"/>" 
+                              checked="checked"/><label for="relprev"><fmt:message key="events.search.previous"/></label></td>
+                      <td valign="top">
+                        <input type="text" id="prevPeriodCount" class="formVeryShort"/>
+                        <select id="prevPeriodType">
+                          <tag:timePeriodOptions min="true" h="true" d="true" w="true" mon="true" y="true"/>
+                        </select><br/>
+                        <span class="formError" id="previousPeriodCountError"></span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td valign="top"><input type="radio" name="relativeType" onchange="updateDateRangeFields()"
+                              id="relpast" value="<c:out value="<%= EventsDwr.RELATIVE_DATE_TYPE_PAST %>"/>"/><label 
+                              for="relpast"><fmt:message key="events.search.past"/></label></td>
+                      <td valign="top">
+                        <input type="text" id="pastPeriodCount" class="formVeryShort"/>
+                        <select id="pastPeriodType">
+                          <tag:timePeriodOptions min="true" h="true" d="true" w="true" mon="true" y="true"/>
+                        </select><br/>
+                        <span class="formError" id="pastPeriodCountError"></span>
+                      </td>
+                    </tr>
+                  </table>
+                  
+                  <div id="dateRangeSpecific" style="display: none;"><tag:dateRange/></div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        
         <tr>
           <td colspan="2" align="center">
             <input id="searchBtn" type="button" value="<fmt:message key="events.search.search"/>" onclick="newSearch()"/>
