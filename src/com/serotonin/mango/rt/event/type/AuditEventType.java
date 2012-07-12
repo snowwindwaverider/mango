@@ -72,23 +72,22 @@ public class AuditEventType extends EventType {
     public static List<EventTypeVO> getAuditEventTypes() {
         if (auditEventTypes == null) {
             auditEventTypes = new ArrayList<EventTypeVO>();
-            SystemSettingsDao dao = new SystemSettingsDao();
 
-            addEventTypeVO(TYPE_DATA_SOURCE, "event.audit.dataSource", dao);
-            addEventTypeVO(TYPE_DATA_POINT, "event.audit.dataPoint", dao);
-            addEventTypeVO(TYPE_POINT_EVENT_DETECTOR, "event.audit.pointEventDetector", dao);
-            addEventTypeVO(TYPE_COMPOUND_EVENT_DETECTOR, "event.audit.compoundEventDetector", dao);
-            addEventTypeVO(TYPE_SCHEDULED_EVENT, "event.audit.scheduledEvent", dao);
-            addEventTypeVO(TYPE_EVENT_HANDLER, "event.audit.eventHandler", dao);
-            addEventTypeVO(TYPE_POINT_LINK, "event.audit.pointLink", dao);
-            addEventTypeVO(TYPE_MAINTENANCE_EVENT, "event.audit.maintenanceEvent", dao);
+            addEventTypeVO(TYPE_DATA_SOURCE, "event.audit.dataSource");
+            addEventTypeVO(TYPE_DATA_POINT, "event.audit.dataPoint");
+            addEventTypeVO(TYPE_POINT_EVENT_DETECTOR, "event.audit.pointEventDetector");
+            addEventTypeVO(TYPE_COMPOUND_EVENT_DETECTOR, "event.audit.compoundEventDetector");
+            addEventTypeVO(TYPE_SCHEDULED_EVENT, "event.audit.scheduledEvent");
+            addEventTypeVO(TYPE_EVENT_HANDLER, "event.audit.eventHandler");
+            addEventTypeVO(TYPE_POINT_LINK, "event.audit.pointLink");
+            addEventTypeVO(TYPE_MAINTENANCE_EVENT, "event.audit.maintenanceEvent");
         }
         return auditEventTypes;
     }
 
-    private static void addEventTypeVO(int type, String key, SystemSettingsDao systemSettingsDao) {
+    private static void addEventTypeVO(int type, String key) {
         auditEventTypes.add(new EventTypeVO(EventType.EventSources.AUDIT, type, 0, new LocalizableMessage(key),
-                systemSettingsDao.getIntValue(AUDIT_SETTINGS_PREFIX + type, AlarmLevels.INFORMATION)));
+                SystemSettingsDao.getIntValue(AUDIT_SETTINGS_PREFIX + type, AlarmLevels.INFORMATION)));
     }
 
     public static EventTypeVO getEventType(int type) {
@@ -148,7 +147,7 @@ public class AuditEventType extends EventType {
         type.setRaisingUser(user);
 
         Common.ctx.getEventManager().raiseEvent(type, System.currentTimeMillis(), false,
-                getEventType(type.getAuditEventTypeId()).getAlarmLevel(), message);
+                getEventType(type.getAuditEventTypeId()).getAlarmLevel(), message, null);
     }
 
     //

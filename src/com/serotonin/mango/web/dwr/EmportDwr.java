@@ -79,7 +79,7 @@ public class EmportDwr extends BaseDwr {
         if (dataSources)
             data.put(DATA_SOURCES, new DataSourceDao().getDataSources());
         if (dataPoints)
-            data.put(DATA_POINTS, new DataPointDao().getDataPoints(null));
+            data.put(DATA_POINTS, new DataPointDao().getDataPoints(null, true));
         if (scheduledEvents)
             data.put(SCHEDULED_EVENTS, new ScheduledEventDao().getScheduledEvents());
         if (compoundEventDetectors)
@@ -93,7 +93,7 @@ public class EmportDwr extends BaseDwr {
         if (publishers)
             data.put(PUBLISHERS, new PublisherDao().getPublishers());
         if (pointHierarchy)
-            data.put(POINT_HIERARCHY, new DataPointDao().getPointHierarchy(true).getRoot().getSubfolders());
+            data.put(POINT_HIERARCHY, new DataPointDao().getPointHierarchy().getRoot().getSubfolders());
         if (eventHandlers)
             data.put(EVENT_HANDLERS, new EventDao().getEventHandlers());
         if (watchLists) {

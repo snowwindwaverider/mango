@@ -25,6 +25,7 @@ import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 
+import com.serotonin.InvalidArgumentException;
 import com.serotonin.ShouldNeverHappenException;
 import com.serotonin.bacnet4j.type.enumerated.EngineeringUnits;
 import com.serotonin.json.JsonArray;
@@ -52,6 +53,7 @@ import com.serotonin.mango.view.text.PlainRenderer;
 import com.serotonin.mango.view.text.TextRenderer;
 import com.serotonin.mango.vo.dataSource.PointLocatorVO;
 import com.serotonin.mango.vo.event.PointEventDetectorVO;
+import com.serotonin.util.ColorUtils;
 import com.serotonin.util.SerializationHelper;
 import com.serotonin.util.StringUtils;
 import com.serotonin.web.dwr.DwrResponseI18n;
@@ -126,15 +128,16 @@ public class DataPointVO implements Serializable, Cloneable, JsonSerializable, C
     }
 
     //
-    // /
-    // / Properties
-    // /
+    //
+    // Properties
     //
     private int id = Common.NEW_ID;
     private String xid;
     @JsonRemoteProperty
     private String name;
     private int dataSourceId;
+    @JsonRemoteProperty
+    private String deviceName;
     @JsonRemoteProperty
     private boolean enabled;
     private int pointFolderId;
@@ -163,23 +166,28 @@ public class DataPointVO implements Serializable, Cloneable, JsonSerializable, C
     @JsonRemoteProperty
     private double discardHighLimit = Double.MAX_VALUE;
     private int engineeringUnits = ENGINEERING_UNITS_DEFAULT;
+    @JsonRemoteProperty
+    private String chartColour;
 
     private PointLocatorVO pointLocator;
 
     //
-    // /
-    // / Convenience data from data source
-    // /
+    //
+    // Convenience data from data source
     //
     private int dataSourceTypeId;
     private String dataSourceName;
+
+    //
+    //
+    // Required for importing
+    //
     @JsonRemoteProperty
     private String dataSourceXid;
 
     //
-    // /
-    // / Runtime data
-    // /
+    //
+    // Runtime data
     //
     /*
      * This is used by the watch list and graphic views to cache the last known value for a point to determine if the
@@ -201,7 +209,7 @@ public class DataPointVO implements Serializable, Cloneable, JsonSerializable, C
     }
 
     public String getExtendedName() {
-        return dataSourceName + " - " + name;
+        return deviceName + " - " + name;
     }
 
     public void defaultTextRenderer() {
@@ -253,6 +261,7 @@ public class DataPointVO implements Serializable, Cloneable, JsonSerializable, C
         AuditEventType.addPropertyMessage(list, "pointEdit.logging.discard", discardExtremeValues);
         AuditEventType.addPropertyMessage(list, "pointEdit.logging.discardLow", discardLowLimit);
         AuditEventType.addPropertyMessage(list, "pointEdit.logging.engineeringUnits", engineeringUnits);
+        AuditEventType.addPropertyMessage(list, "pointEdit.props.chartColour", chartColour);
 
         pointLocator.addProperties(list);
     }
@@ -281,6 +290,8 @@ public class DataPointVO implements Serializable, Cloneable, JsonSerializable, C
                 discardHighLimit);
         AuditEventType.maybeAddPropertyChangeMessage(list, "pointEdit.logging.engineeringUnits", from.engineeringUnits,
                 engineeringUnits);
+        AuditEventType
+                .maybeAddPropertyChangeMessage(list, "pointEdit.props.chartColour", from.chartColour, chartColour);
 
         pointLocator.addPropertyChanges(list, from.pointLocator);
     }
@@ -291,6 +302,14 @@ public class DataPointVO implements Serializable, Cloneable, JsonSerializable, C
 
     public void setDataSourceId(int dataSourceId) {
         this.dataSourceId = dataSourceId;
+    }
+
+    public String getDeviceName() {
+        return deviceName;
+    }
+
+    public void setDeviceName(String deviceName) {
+        this.deviceName = deviceName;
     }
 
     public boolean isEnabled() {
@@ -348,6 +367,8 @@ public class DataPointVO implements Serializable, Cloneable, JsonSerializable, C
 
     public void setDataSourceName(String dataSourceName) {
         this.dataSourceName = dataSourceName;
+        if (deviceName == null)
+            deviceName = dataSourceName;
     }
 
     public String getDataSourceXid() {
@@ -494,6 +515,14 @@ public class DataPointVO implements Serializable, Cloneable, JsonSerializable, C
         this.engineeringUnits = engineeringUnits;
     }
 
+    public String getChartColour() {
+        return chartColour;
+    }
+
+    public void setChartColour(String chartColour) {
+        this.chartColour = chartColour;
+    }
+
     public DataPointVO copy() {
         try {
             return (DataPointVO) super.clone();
@@ -503,9 +532,27 @@ public class DataPointVO implements Serializable, Cloneable, JsonSerializable, C
         }
     }
 
+    @Override
+    public String toString() {
+        return "DataPointVO [id=" + id + ", xid=" + xid + ", name=" + name + ", dataSourceId=" + dataSourceId
+                + ", deviceName=" + deviceName + ", enabled=" + enabled + ", pointFolderId=" + pointFolderId
+                + ", loggingType=" + loggingType + ", intervalLoggingPeriodType=" + intervalLoggingPeriodType
+                + ", intervalLoggingPeriod=" + intervalLoggingPeriod + ", intervalLoggingType=" + intervalLoggingType
+                + ", tolerance=" + tolerance + ", purgeType=" + purgeType + ", purgePeriod=" + purgePeriod
+                + ", textRenderer=" + textRenderer + ", chartRenderer=" + chartRenderer + ", eventDetectors="
+                + eventDetectors + ", comments=" + comments + ", defaultCacheSize=" + defaultCacheSize
+                + ", discardExtremeValues=" + discardExtremeValues + ", discardLowLimit=" + discardLowLimit
+                + ", discardHighLimit=" + discardHighLimit + ", engineeringUnits=" + engineeringUnits
+                + ", chartColour=" + chartColour + ", pointLocator=" + pointLocator + ", dataSourceTypeId="
+                + dataSourceTypeId + ", dataSourceName=" + dataSourceName + ", dataSourceXid=" + dataSourceXid
+                + ", lastValue=" + lastValue + ", settable=" + settable + "]";
+    }
+
     public void validate(DwrResponseI18n response) {
         if (StringUtils.isEmpty(xid))
             response.addContextualMessage("xid", "validate.required");
+        else if (StringUtils.isLengthGreaterThan(xid, 50))
+            response.addMessage("xid", new LocalizableMessage("validate.notLongerThan", 50));
         else if (!new DataPointDao().isXidUnique(xid, id))
             response.addContextualMessage("xid", "validate.xidUsed");
 
@@ -540,6 +587,15 @@ public class DataPointVO implements Serializable, Cloneable, JsonSerializable, C
         if (discardExtremeValues && discardHighLimit <= discardLowLimit)
             response.addContextualMessage("discardHighLimit", "validate.greaterThanDiscardLow");
 
+        if (!StringUtils.isEmpty(chartColour)) {
+            try {
+                ColorUtils.toColor(chartColour);
+            }
+            catch (InvalidArgumentException e) {
+                response.addContextualMessage("chartColour", "validate.invalidValue");
+            }
+        }
+
         pointLocator.validate(response);
 
         // Check text renderer type
@@ -552,15 +608,15 @@ public class DataPointVO implements Serializable, Cloneable, JsonSerializable, C
     }
 
     //
-    // /
-    // / Serialization
-    // /
     //
-    private static final int version = 6;
+    // Serialization
+    //
+    private static final int version = 8;
 
     private void writeObject(ObjectOutputStream out) throws IOException {
         out.writeInt(version);
         SerializationHelper.writeSafeUTF(out, name);
+        SerializationHelper.writeSafeUTF(out, deviceName);
         out.writeBoolean(enabled);
         out.writeInt(pointFolderId);
         out.writeInt(loggingType);
@@ -578,6 +634,7 @@ public class DataPointVO implements Serializable, Cloneable, JsonSerializable, C
         out.writeDouble(discardLowLimit);
         out.writeDouble(discardHighLimit);
         out.writeInt(engineeringUnits);
+        SerializationHelper.writeSafeUTF(out, chartColour);
     }
 
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
@@ -586,6 +643,7 @@ public class DataPointVO implements Serializable, Cloneable, JsonSerializable, C
         // Switch on the version of the class so that version changes can be elegantly handled.
         if (ver == 1) {
             name = SerializationHelper.readSafeUTF(in);
+            deviceName = null;
             enabled = in.readBoolean();
             pointFolderId = 0;
             loggingType = in.readInt();
@@ -600,9 +658,11 @@ public class DataPointVO implements Serializable, Cloneable, JsonSerializable, C
             pointLocator = (PointLocatorVO) in.readObject();
             defaultCacheSize = 0;
             engineeringUnits = ENGINEERING_UNITS_DEFAULT;
+            chartColour = null;
         }
         else if (ver == 2) {
             name = SerializationHelper.readSafeUTF(in);
+            deviceName = null;
             enabled = in.readBoolean();
             pointFolderId = in.readInt();
             loggingType = in.readInt();
@@ -625,9 +685,11 @@ public class DataPointVO implements Serializable, Cloneable, JsonSerializable, C
             }
             defaultCacheSize = 0;
             engineeringUnits = ENGINEERING_UNITS_DEFAULT;
+            chartColour = null;
         }
         else if (ver == 3) {
             name = SerializationHelper.readSafeUTF(in);
+            deviceName = null;
             enabled = in.readBoolean();
             pointFolderId = in.readInt();
             loggingType = in.readInt();
@@ -650,9 +712,11 @@ public class DataPointVO implements Serializable, Cloneable, JsonSerializable, C
             }
             defaultCacheSize = in.readInt();
             engineeringUnits = ENGINEERING_UNITS_DEFAULT;
+            chartColour = null;
         }
         else if (ver == 4) {
             name = SerializationHelper.readSafeUTF(in);
+            deviceName = null;
             enabled = in.readBoolean();
             pointFolderId = in.readInt();
             loggingType = in.readInt();
@@ -675,9 +739,11 @@ public class DataPointVO implements Serializable, Cloneable, JsonSerializable, C
             }
             defaultCacheSize = in.readInt();
             engineeringUnits = ENGINEERING_UNITS_DEFAULT;
+            chartColour = null;
         }
         else if (ver == 5) {
             name = SerializationHelper.readSafeUTF(in);
+            deviceName = null;
             enabled = in.readBoolean();
             pointFolderId = in.readInt();
             loggingType = in.readInt();
@@ -695,9 +761,11 @@ public class DataPointVO implements Serializable, Cloneable, JsonSerializable, C
             discardLowLimit = in.readDouble();
             discardHighLimit = in.readDouble();
             engineeringUnits = ENGINEERING_UNITS_DEFAULT;
+            chartColour = null;
         }
         else if (ver == 6) {
             name = SerializationHelper.readSafeUTF(in);
+            deviceName = null;
             enabled = in.readBoolean();
             pointFolderId = in.readInt();
             loggingType = in.readInt();
@@ -715,6 +783,51 @@ public class DataPointVO implements Serializable, Cloneable, JsonSerializable, C
             discardLowLimit = in.readDouble();
             discardHighLimit = in.readDouble();
             engineeringUnits = in.readInt();
+            chartColour = null;
+        }
+        else if (ver == 7) {
+            name = SerializationHelper.readSafeUTF(in);
+            deviceName = null;
+            enabled = in.readBoolean();
+            pointFolderId = in.readInt();
+            loggingType = in.readInt();
+            intervalLoggingPeriodType = in.readInt();
+            intervalLoggingPeriod = in.readInt();
+            intervalLoggingType = in.readInt();
+            tolerance = in.readDouble();
+            purgeType = in.readInt();
+            purgePeriod = in.readInt();
+            textRenderer = (TextRenderer) in.readObject();
+            chartRenderer = (ChartRenderer) in.readObject();
+            pointLocator = (PointLocatorVO) in.readObject();
+            defaultCacheSize = in.readInt();
+            discardExtremeValues = in.readBoolean();
+            discardLowLimit = in.readDouble();
+            discardHighLimit = in.readDouble();
+            engineeringUnits = in.readInt();
+            chartColour = SerializationHelper.readSafeUTF(in);
+        }
+        else if (ver == 8) {
+            name = SerializationHelper.readSafeUTF(in);
+            deviceName = SerializationHelper.readSafeUTF(in);
+            enabled = in.readBoolean();
+            pointFolderId = in.readInt();
+            loggingType = in.readInt();
+            intervalLoggingPeriodType = in.readInt();
+            intervalLoggingPeriod = in.readInt();
+            intervalLoggingType = in.readInt();
+            tolerance = in.readDouble();
+            purgeType = in.readInt();
+            purgePeriod = in.readInt();
+            textRenderer = (TextRenderer) in.readObject();
+            chartRenderer = (ChartRenderer) in.readObject();
+            pointLocator = (PointLocatorVO) in.readObject();
+            defaultCacheSize = in.readInt();
+            discardExtremeValues = in.readBoolean();
+            discardLowLimit = in.readDouble();
+            discardHighLimit = in.readDouble();
+            engineeringUnits = in.readInt();
+            chartColour = SerializationHelper.readSafeUTF(in);
         }
 
         // Check the purge type. Weird how this could have been set to 0.

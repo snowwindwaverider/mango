@@ -54,7 +54,7 @@ public class PointLinksDwr extends BaseDwr {
         Map<String, Object> data = new HashMap<String, Object>();
 
         // Get the points that this user can access.
-        List<DataPointVO> allPoints = new DataPointDao().getDataPoints(DataPointExtendedNameComparator.instance);
+        List<DataPointVO> allPoints = new DataPointDao().getDataPoints(DataPointExtendedNameComparator.instance, false);
         List<IntValuePair> sourcePoints = new ArrayList<IntValuePair>();
         List<IntValuePair> targetPoints = new ArrayList<IntValuePair>();
         for (DataPointVO point : allPoints) {
@@ -156,8 +156,8 @@ public class PointLinksDwr extends BaseDwr {
                 else if (pvt.getTime() == -1)
                     message = new LocalizableMessage("pointLinks.validate.success", pvt.getValue());
                 else
-                    message = new LocalizableMessage("pointLinks.validate.successTs", pvt.getValue(), DateFunctions
-                            .getTime(pvt.getTime()));
+                    message = new LocalizableMessage("pointLinks.validate.successTs", pvt.getValue(),
+                            DateFunctions.getTime(pvt.getTime()));
             }
             catch (ScriptException e) {
                 message = new LocalizableMessage("common.default", e.getMessage());

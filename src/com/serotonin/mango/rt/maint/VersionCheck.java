@@ -18,10 +18,17 @@
  */
 package com.serotonin.mango.rt.maint;
 
-import java.io.IOException;
 import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Enumeration;
+import java.util.List;
+import java.util.UUID;
 
 import org.apache.commons.httpclient.Header;
 import org.apache.commons.httpclient.HttpClient;
@@ -29,7 +36,6 @@ import org.apache.commons.httpclient.HttpException;
 import org.apache.commons.httpclient.HttpStatus;
 import org.apache.commons.httpclient.methods.PostMethod;
 
-import com.serotonin.io.StreamUtils;
 import com.serotonin.mango.Common;
 import com.serotonin.mango.db.dao.DataPointDao;
 import com.serotonin.mango.db.dao.DataSourceDao;
@@ -42,7 +48,7 @@ import com.serotonin.mango.vo.dataSource.DataSourceVO;
 import com.serotonin.mango.vo.publish.PublisherVO;
 import com.serotonin.timer.FixedRateTrigger;
 import com.serotonin.timer.TimerTask;
-import com.serotonin.util.StringUtils;
+import com.serotonin.util.queue.ByteQueue;
 import com.serotonin.web.http.HttpUtils;
 import com.serotonin.web.i18n.LocalizableMessage;
 
@@ -82,34 +88,16 @@ public class VersionCheck extends TimerTask {
         super(new FixedRateTrigger(100000, TIMEOUT));
     }
 
-    private static String getInstanceId() {
-        if (instanceId == null) {
-            String filename = Common.ctx.getServletContext().getRealPath(INSTANCE_ID_FILE);
-            try {
-                // Try to read the instance id from a file.
-                instanceId = StreamUtils.readFile(filename);
-            }
-            catch (Exception e) {
-                // Assume that the file doesn't exist.
-                instanceId = StringUtils.generatePassword(32);
-
-                // Write the value to the file.
-                try {
-                    StreamUtils.writeFile(filename, instanceId);
-                }
-                catch (IOException e1) {
-                    // Give it up.
-                }
-            }
-
-        }
+    public static String getInstanceId() {
+        if (instanceId == null)
+            instanceId = calcMachineId();
         return instanceId;
     }
 
     @Override
     public void run(long fireTime) {
         try {
-            String notifLevel = new SystemSettingsDao().getValue(SystemSettingsDao.NEW_VERSION_NOTIFICATION_LEVEL);
+            String notifLevel = SystemSettingsDao.getValue(SystemSettingsDao.NEW_VERSION_NOTIFICATION_LEVEL);
             newVersionCheck(fireTime, notifLevel);
         }
         catch (SocketTimeoutException e) {
@@ -150,6 +138,7 @@ public class VersionCheck extends TimerTask {
         PostMethod postMethod = new PostMethod(Common.getGroveUrl(Common.GroveServlets.VERSION_CHECK));
 
         postMethod.addParameter("instanceId", getInstanceId());
+        postMethod.addParameter("instanceName", SystemSettingsDao.getValue(SystemSettingsDao.INSTANCE_DESCRIPTION));
         try {
             postMethod.addParameter("instanceIp", InetAddress.getLocalHost().getHostAddress());
         }
@@ -220,5 +209,55 @@ public class VersionCheck extends TimerTask {
             return null;
 
         return stableVersion;
+    }
+
+    private static String calcMachineId() {
+        List<NI> nis = new ArrayList<NI>();
+
+        try {
+            Enumeration<NetworkInterface> eni = NetworkInterface.getNetworkInterfaces();
+            while (eni.hasMoreElements()) {
+                NetworkInterface netint = eni.nextElement();
+                NI ni = new NI();
+                ni.name = netint.getName();
+                try {
+                    ni.hwAddress = netint.getHardwareAddress();
+                }
+                catch (SocketException e) {
+                    // ignore this too
+                }
+                if (ni.name != null && ni.hwAddress != null)
+                    // Should be for real.
+                    nis.add(ni);
+            }
+        }
+        catch (SocketException e) {
+            // ignore
+        }
+
+        if (nis.isEmpty())
+            return null;
+
+        // Sort the NIs just to make sure we always add them in the same order.
+        Collections.sort(nis, new Comparator<NI>() {
+            @Override
+            public int compare(NI ni1, NI ni2) {
+                return ni1.name.compareTo(ni2.name);
+            }
+        });
+
+        ByteQueue queue = new ByteQueue();
+        for (NI ni : nis) {
+            queue.push(ni.name.getBytes(Common.UTF8_CS));
+            queue.push(ni.hwAddress);
+        }
+
+        UUID uuid = UUID.nameUUIDFromBytes(queue.popAll());
+        return uuid.toString();
+    }
+
+    static class NI {
+        String name;
+        byte[] hwAddress;
     }
 }

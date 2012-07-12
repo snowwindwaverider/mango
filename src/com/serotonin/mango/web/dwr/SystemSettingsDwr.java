@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
 
+import com.serotonin.InvalidArgumentException;
 import com.serotonin.mango.Common;
 import com.serotonin.mango.db.dao.DataPointDao;
 import com.serotonin.mango.db.dao.EventDao;
@@ -34,14 +35,15 @@ import com.serotonin.mango.rt.event.type.SystemEventType;
 import com.serotonin.mango.rt.maint.DataPurge;
 import com.serotonin.mango.rt.maint.VersionCheck;
 import com.serotonin.mango.rt.maint.work.EmailWorkItem;
-import com.serotonin.mango.util.freemarker.MangoEmailContent;
-import com.serotonin.mango.util.freemarker.MessageFormatDirective;
 import com.serotonin.mango.vo.User;
 import com.serotonin.mango.vo.bean.PointHistoryCount;
 import com.serotonin.mango.vo.permission.Permissions;
 import com.serotonin.mango.web.dwr.beans.IntegerPair;
+import com.serotonin.mango.web.email.MangoEmailContent;
+import com.serotonin.util.ColorUtils;
 import com.serotonin.util.DirectoryInfo;
 import com.serotonin.util.DirectoryUtils;
+import com.serotonin.web.dwr.DwrResponseI18n;
 import com.serotonin.web.dwr.MethodFilter;
 import com.serotonin.web.i18n.I18NUtils;
 import com.serotonin.web.i18n.LocalizableMessage;
@@ -50,25 +52,24 @@ public class SystemSettingsDwr extends BaseDwr {
     @MethodFilter
     public Map<String, Object> getSettings() {
         Permissions.ensureAdmin();
-        SystemSettingsDao systemSettingsDao = new SystemSettingsDao();
         Map<String, Object> settings = new HashMap<String, Object>();
 
         // Email
-        settings.put(SystemSettingsDao.EMAIL_SMTP_HOST, systemSettingsDao.getValue(SystemSettingsDao.EMAIL_SMTP_HOST));
+        settings.put(SystemSettingsDao.EMAIL_SMTP_HOST, SystemSettingsDao.getValue(SystemSettingsDao.EMAIL_SMTP_HOST));
         settings.put(SystemSettingsDao.EMAIL_SMTP_PORT,
-                systemSettingsDao.getIntValue(SystemSettingsDao.EMAIL_SMTP_PORT));
+                SystemSettingsDao.getIntValue(SystemSettingsDao.EMAIL_SMTP_PORT));
         settings.put(SystemSettingsDao.EMAIL_FROM_ADDRESS,
-                systemSettingsDao.getValue(SystemSettingsDao.EMAIL_FROM_ADDRESS));
-        settings.put(SystemSettingsDao.EMAIL_FROM_NAME, systemSettingsDao.getValue(SystemSettingsDao.EMAIL_FROM_NAME));
+                SystemSettingsDao.getValue(SystemSettingsDao.EMAIL_FROM_ADDRESS));
+        settings.put(SystemSettingsDao.EMAIL_FROM_NAME, SystemSettingsDao.getValue(SystemSettingsDao.EMAIL_FROM_NAME));
         settings.put(SystemSettingsDao.EMAIL_AUTHORIZATION,
-                systemSettingsDao.getBooleanValue(SystemSettingsDao.EMAIL_AUTHORIZATION));
+                SystemSettingsDao.getBooleanValue(SystemSettingsDao.EMAIL_AUTHORIZATION));
         settings.put(SystemSettingsDao.EMAIL_SMTP_USERNAME,
-                systemSettingsDao.getValue(SystemSettingsDao.EMAIL_SMTP_USERNAME));
+                SystemSettingsDao.getValue(SystemSettingsDao.EMAIL_SMTP_USERNAME));
         settings.put(SystemSettingsDao.EMAIL_SMTP_PASSWORD,
-                systemSettingsDao.getValue(SystemSettingsDao.EMAIL_SMTP_PASSWORD));
-        settings.put(SystemSettingsDao.EMAIL_TLS, systemSettingsDao.getBooleanValue(SystemSettingsDao.EMAIL_TLS));
+                SystemSettingsDao.getValue(SystemSettingsDao.EMAIL_SMTP_PASSWORD));
+        settings.put(SystemSettingsDao.EMAIL_TLS, SystemSettingsDao.getBooleanValue(SystemSettingsDao.EMAIL_TLS));
         settings.put(SystemSettingsDao.EMAIL_CONTENT_TYPE,
-                systemSettingsDao.getIntValue(SystemSettingsDao.EMAIL_CONTENT_TYPE));
+                SystemSettingsDao.getIntValue(SystemSettingsDao.EMAIL_CONTENT_TYPE));
 
         // System event types
         settings.put("systemEventTypes", SystemEventType.getSystemEventTypes());
@@ -78,42 +79,50 @@ public class SystemSettingsDwr extends BaseDwr {
 
         // Http
         settings.put(SystemSettingsDao.HTTP_CLIENT_USE_PROXY,
-                systemSettingsDao.getBooleanValue(SystemSettingsDao.HTTP_CLIENT_USE_PROXY));
+                SystemSettingsDao.getBooleanValue(SystemSettingsDao.HTTP_CLIENT_USE_PROXY));
         settings.put(SystemSettingsDao.HTTP_CLIENT_PROXY_SERVER,
-                systemSettingsDao.getValue(SystemSettingsDao.HTTP_CLIENT_PROXY_SERVER));
+                SystemSettingsDao.getValue(SystemSettingsDao.HTTP_CLIENT_PROXY_SERVER));
         settings.put(SystemSettingsDao.HTTP_CLIENT_PROXY_PORT,
-                systemSettingsDao.getIntValue(SystemSettingsDao.HTTP_CLIENT_PROXY_PORT));
+                SystemSettingsDao.getIntValue(SystemSettingsDao.HTTP_CLIENT_PROXY_PORT));
         settings.put(SystemSettingsDao.HTTP_CLIENT_PROXY_USERNAME,
-                systemSettingsDao.getValue(SystemSettingsDao.HTTP_CLIENT_PROXY_USERNAME));
+                SystemSettingsDao.getValue(SystemSettingsDao.HTTP_CLIENT_PROXY_USERNAME));
         settings.put(SystemSettingsDao.HTTP_CLIENT_PROXY_PASSWORD,
-                systemSettingsDao.getValue(SystemSettingsDao.HTTP_CLIENT_PROXY_PASSWORD));
+                SystemSettingsDao.getValue(SystemSettingsDao.HTTP_CLIENT_PROXY_PASSWORD));
 
         // Misc
         settings.put(SystemSettingsDao.EVENT_PURGE_PERIOD_TYPE,
-                systemSettingsDao.getIntValue(SystemSettingsDao.EVENT_PURGE_PERIOD_TYPE));
+                SystemSettingsDao.getIntValue(SystemSettingsDao.EVENT_PURGE_PERIOD_TYPE));
         settings.put(SystemSettingsDao.EVENT_PURGE_PERIODS,
-                systemSettingsDao.getIntValue(SystemSettingsDao.EVENT_PURGE_PERIODS));
+                SystemSettingsDao.getIntValue(SystemSettingsDao.EVENT_PURGE_PERIODS));
         settings.put(SystemSettingsDao.REPORT_PURGE_PERIOD_TYPE,
-                systemSettingsDao.getIntValue(SystemSettingsDao.REPORT_PURGE_PERIOD_TYPE));
+                SystemSettingsDao.getIntValue(SystemSettingsDao.REPORT_PURGE_PERIOD_TYPE));
         settings.put(SystemSettingsDao.REPORT_PURGE_PERIODS,
-                systemSettingsDao.getIntValue(SystemSettingsDao.REPORT_PURGE_PERIODS));
+                SystemSettingsDao.getIntValue(SystemSettingsDao.REPORT_PURGE_PERIODS));
         settings.put(SystemSettingsDao.UI_PERFORAMANCE,
-                systemSettingsDao.getIntValue(SystemSettingsDao.UI_PERFORAMANCE));
+                SystemSettingsDao.getIntValue(SystemSettingsDao.UI_PERFORAMANCE));
         settings.put(SystemSettingsDao.GROVE_LOGGING,
-                systemSettingsDao.getBooleanValue(SystemSettingsDao.GROVE_LOGGING));
+                SystemSettingsDao.getBooleanValue(SystemSettingsDao.GROVE_LOGGING));
         settings.put(SystemSettingsDao.FUTURE_DATE_LIMIT_PERIOD_TYPE,
-                systemSettingsDao.getIntValue(SystemSettingsDao.FUTURE_DATE_LIMIT_PERIOD_TYPE));
+                SystemSettingsDao.getIntValue(SystemSettingsDao.FUTURE_DATE_LIMIT_PERIOD_TYPE));
         settings.put(SystemSettingsDao.FUTURE_DATE_LIMIT_PERIODS,
-                systemSettingsDao.getIntValue(SystemSettingsDao.FUTURE_DATE_LIMIT_PERIODS));
+                SystemSettingsDao.getIntValue(SystemSettingsDao.FUTURE_DATE_LIMIT_PERIODS));
 
         // System
         settings.put(SystemSettingsDao.NEW_VERSION_NOTIFICATION_LEVEL,
-                systemSettingsDao.getValue(SystemSettingsDao.NEW_VERSION_NOTIFICATION_LEVEL));
+                SystemSettingsDao.getValue(SystemSettingsDao.NEW_VERSION_NOTIFICATION_LEVEL));
         settings.put(SystemSettingsDao.INSTANCE_DESCRIPTION,
-                systemSettingsDao.getValue(SystemSettingsDao.INSTANCE_DESCRIPTION));
+                SystemSettingsDao.getValue(SystemSettingsDao.INSTANCE_DESCRIPTION));
 
         // Language
-        settings.put(SystemSettingsDao.LANGUAGE, systemSettingsDao.getValue(SystemSettingsDao.LANGUAGE));
+        settings.put(SystemSettingsDao.LANGUAGE, SystemSettingsDao.getValue(SystemSettingsDao.LANGUAGE));
+
+        // Colours
+        settings.put(SystemSettingsDao.CHART_BACKGROUND_COLOUR,
+                SystemSettingsDao.getValue(SystemSettingsDao.CHART_BACKGROUND_COLOUR));
+        settings.put(SystemSettingsDao.PLOT_BACKGROUND_COLOUR,
+                SystemSettingsDao.getValue(SystemSettingsDao.PLOT_BACKGROUND_COLOUR));
+        settings.put(SystemSettingsDao.PLOT_GRIDLINE_COLOUR,
+                SystemSettingsDao.getValue(SystemSettingsDao.PLOT_GRIDLINE_COLOUR));
 
         return settings;
     }
@@ -187,9 +196,9 @@ public class SystemSettingsDwr extends BaseDwr {
             ResourceBundle bundle = getResourceBundle();
             Map<String, Object> model = new HashMap<String, Object>();
             model.put("message", new LocalizableMessage("systemSettings.testEmail"));
-            model.put("fmt", new MessageFormatDirective(bundle));
-            EmailWorkItem.queueEmail(user.getEmail(), I18NUtils.getMessage(bundle, "ftl.testEmail"),
-                    new MangoEmailContent("testEmail", model, Common.UTF8));
+            MangoEmailContent cnt = new MangoEmailContent("testEmail", model, bundle, I18NUtils.getMessage(bundle,
+                    "ftl.testEmail"), Common.UTF8);
+            EmailWorkItem.queueEmail(user.getEmail(), cnt);
             result.put("message", new LocalizableMessage("common.testEmailSent", user.getEmail()));
         }
         catch (Exception e) {
@@ -237,6 +246,47 @@ public class SystemSettingsDwr extends BaseDwr {
         systemSettingsDao.setBooleanValue(SystemSettingsDao.GROVE_LOGGING, groveLogging);
         systemSettingsDao.setIntValue(SystemSettingsDao.FUTURE_DATE_LIMIT_PERIOD_TYPE, futureDateLimitPeriodType);
         systemSettingsDao.setIntValue(SystemSettingsDao.FUTURE_DATE_LIMIT_PERIODS, futureDateLimitPeriods);
+    }
+
+    @MethodFilter
+    public DwrResponseI18n saveColourSettings(String chartBackgroundColour, String plotBackgroundColour,
+            String plotGridlineColour) {
+        Permissions.ensureAdmin();
+
+        DwrResponseI18n response = new DwrResponseI18n();
+
+        try {
+            ColorUtils.toColor(chartBackgroundColour);
+        }
+        catch (InvalidArgumentException e) {
+            response.addContextualMessage(SystemSettingsDao.CHART_BACKGROUND_COLOUR,
+                    "systemSettings.validation.invalidColour");
+        }
+
+        try {
+            ColorUtils.toColor(plotBackgroundColour);
+        }
+        catch (InvalidArgumentException e) {
+            response.addContextualMessage(SystemSettingsDao.PLOT_BACKGROUND_COLOUR,
+                    "systemSettings.validation.invalidColour");
+        }
+
+        try {
+            ColorUtils.toColor(plotGridlineColour);
+        }
+        catch (InvalidArgumentException e) {
+            response.addContextualMessage(SystemSettingsDao.PLOT_GRIDLINE_COLOUR,
+                    "systemSettings.validation.invalidColour");
+        }
+
+        if (!response.getHasMessages()) {
+            SystemSettingsDao systemSettingsDao = new SystemSettingsDao();
+            systemSettingsDao.setValue(SystemSettingsDao.CHART_BACKGROUND_COLOUR, chartBackgroundColour);
+            systemSettingsDao.setValue(SystemSettingsDao.PLOT_BACKGROUND_COLOUR, plotBackgroundColour);
+            systemSettingsDao.setValue(SystemSettingsDao.PLOT_GRIDLINE_COLOUR, plotGridlineColour);
+        }
+
+        return response;
     }
 
     @MethodFilter

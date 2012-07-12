@@ -44,7 +44,7 @@
   </appender>
   
   <category name="org.directwebremoting">
-    <level value="warn"/>
+    <level value="fatal"/>
   </category>
   
   <category name="org">

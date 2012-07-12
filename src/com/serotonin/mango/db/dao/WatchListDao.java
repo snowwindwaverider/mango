@@ -50,9 +50,9 @@ public class WatchListDao extends BaseDao {
      * Note: this method only returns basic watchlist information. No data points or share users.
      */
     public List<WatchList> getWatchLists(final int userId) {
-        return query("select id, xid, userId, name from watchLists "
-                + "where userId=? or id in (select watchListId from watchListUsers where userId=?)", new Object[] {
-                userId, userId }, new WatchListRowMapper());
+        return query("select id, xid, userId, name from watchLists " //
+                + "where userId=? or id in (select watchListId from watchListUsers where userId=?) " //
+                + "order by name", new Object[] { userId, userId }, new WatchListRowMapper());
     }
 
     /**
@@ -129,7 +129,7 @@ public class WatchListDao extends BaseDao {
             @Override
             protected void doInTransactionWithoutResult(TransactionStatus status) {
                 if (watchList.getId() == Common.NEW_ID)
-                    watchList.setId(doInsert("insert into watchlists (xid, name, userId) values (?,?,?)", new Object[] {
+                    watchList.setId(doInsert("insert into watchLists (xid, name, userId) values (?,?,?)", new Object[] {
                             watchList.getXid(), watchList.getName(), watchList.getUserId() }));
                 else
                     ejt2.update("update watchLists set xid=?, name=? where id=?", new Object[] { watchList.getXid(),

@@ -121,7 +121,7 @@ public class DerbyAccess extends DatabaseAccess {
             // The users table wasn't found, so assume that this is a new Mango instance.
             // Create the tables
             try {
-                FileOutputStream out = new FileOutputStream("C:/ApacheTomcat/logs/createTables.log");
+                FileOutputStream out = new FileOutputStream("createTables.log");
                 Connection conn = DataSourceUtils.getConnection(dataSource);
                 org.apache.derby.tools.ij.runScript(conn,
                         ctx.getResourceAsStream("/WEB-INF/db/createTables-derby.sql"), "ASCII", out, Common.UTF8);

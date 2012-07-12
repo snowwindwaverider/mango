@@ -19,6 +19,7 @@
 package com.serotonin.mango;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -38,6 +39,7 @@ import org.apache.commons.logging.LogFactory;
 import com.serotonin.ShouldNeverHappenException;
 import com.serotonin.mango.db.DatabaseAccess;
 import com.serotonin.mango.db.dao.ReportDao;
+import com.serotonin.mango.db.dao.SystemSettingsDao;
 import com.serotonin.mango.rt.EventManager;
 import com.serotonin.mango.rt.RuntimeManager;
 import com.serotonin.mango.rt.dataSource.http.HttpReceiverMulticaster;
@@ -61,8 +63,12 @@ import com.serotonin.mango.vo.report.ReportJob;
 import com.serotonin.mango.vo.report.ReportVO;
 import com.serotonin.mango.web.ContextWrapper;
 import com.serotonin.mango.web.dwr.BaseDwr;
+import com.serotonin.util.StringUtils;
 import com.serotonin.web.i18n.LocalizableMessage;
 
+import freemarker.cache.FileTemplateLoader;
+import freemarker.cache.MultiTemplateLoader;
+import freemarker.cache.TemplateLoader;
 import freemarker.template.Configuration;
 import freemarker.template.DefaultObjectWrapper;
 
@@ -79,13 +85,24 @@ public class MangoContextListener implements ServletContextListener {
         Common.ctx = new ContextWrapper(ctx);
 
         // Initialize the timer
-        Common.timer.init(new ThreadPoolExecutor(0, 500, 30L, TimeUnit.SECONDS, new SynchronousQueue<Runnable>()));
+        Common.timer.init(new ThreadPoolExecutor(0, 1000, 30L, TimeUnit.SECONDS, new SynchronousQueue<Runnable>()));
 
         // Create all the stuff we need.
         constantsInitialize(ctx);
         freemarkerInitialize(ctx);
         imageSetInitialize(ctx);
         databaseInitialize(ctx);
+
+        // Check if the known servlet context path has changed.
+        String knownContextPath = SystemSettingsDao.getValue(SystemSettingsDao.SERVLET_CONTEXT_PATH);
+        if (knownContextPath != null) {
+            String contextPath = ctx.getContextPath();
+            if (!StringUtils.isEqual(knownContextPath, contextPath))
+                log.warn("Mango's known servlet context path has changed from " + knownContextPath + " to "
+                        + contextPath + ". Are there two instances of Mango running?");
+        }
+        new SystemSettingsDao().setValue(SystemSettingsDao.SERVLET_CONTEXT_PATH, ctx.getContextPath());
+
         utilitiesInitialize(ctx);
         eventManagerInitialize(ctx);
         runtimeManagerInitialize(ctx);
@@ -163,6 +180,8 @@ public class MangoContextListener implements ServletContextListener {
         ctx.setAttribute("constants.DataSourceVO.Types.PACHUBE", DataSourceVO.Type.PACHUBE.getId());
         ctx.setAttribute("constants.DataSourceVO.Types.PERSISTENT", DataSourceVO.Type.PERSISTENT.getId());
         ctx.setAttribute("constants.DataSourceVO.Types.OPC", DataSourceVO.Type.OPC.getId());
+        ctx.setAttribute("constants.DataSourceVO.Types.JMX", DataSourceVO.Type.JMX.getId());
+        ctx.setAttribute("constants.DataSourceVO.Types.INTERNAL", DataSourceVO.Type.INTERNAL.getId());
 
         ctx.setAttribute("constants.Permissions.DataPointAccessTypes.NONE", Permissions.DataPointAccessTypes.NONE);
         ctx.setAttribute("constants.Permissions.DataPointAccessTypes.READ", Permissions.DataPointAccessTypes.READ);
@@ -367,10 +386,23 @@ public class MangoContextListener implements ServletContextListener {
     private void freemarkerInitialize(ServletContext ctx) {
         Configuration cfg = new Configuration();
         try {
-            cfg.setDirectoryForTemplateLoading(new File(ctx.getRealPath("/WEB-INF/ftl")));
+            List<TemplateLoader> loaders = new ArrayList<TemplateLoader>();
+
+            // Add the override template dir
+            try {
+                loaders.add(new FileTemplateLoader(new File(ctx.getRealPath("/WEB-INF/ftl-override"))));
+            }
+            catch (FileNotFoundException e) {
+                // ignore
+            }
+
+            // Add the default template dir
+            loaders.add(new FileTemplateLoader(new File(ctx.getRealPath("/WEB-INF/ftl"))));
+
+            cfg.setTemplateLoader(new MultiTemplateLoader(loaders.toArray(new TemplateLoader[loaders.size()])));
         }
         catch (IOException e) {
-            log.error("Exception defining Freemarker template directory", e);
+            log.error("Exception defining Freemarker template directories", e);
         }
         cfg.setObjectWrapper(new DefaultObjectWrapper());
         ctx.setAttribute(Common.ContextKeys.FREEMARKER_CONFIG, cfg);

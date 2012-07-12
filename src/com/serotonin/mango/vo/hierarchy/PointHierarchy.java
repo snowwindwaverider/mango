@@ -18,6 +18,10 @@
  */
 package com.serotonin.mango.vo.hierarchy;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 import com.serotonin.ShouldNeverHappenException;
 import com.serotonin.db.IntValuePair;
 
@@ -34,6 +38,12 @@ public class PointHierarchy {
 
     public PointHierarchy(PointFolder root) {
         this.root = root;
+    }
+
+    public PointHierarchy copyFoldersOnly() {
+        PointHierarchy copy = new PointHierarchy();
+        copy.root.copyFoldersFrom(root);
+        return copy;
     }
 
     public void addPointFolder(PointFolder f, int parentId) {
@@ -80,6 +90,29 @@ public class PointHierarchy {
 
     public PointFolder getRoot() {
         return root;
+    }
+
+    public List<String> getPath(int pointId) {
+        List<PointFolder> path = getFolderPath(pointId);
+
+        List<String> result = new ArrayList<String>();
+        // Skip the root.
+        for (int i = 1; i < path.size(); i++)
+            result.add(path.get(i).getName());
+
+        return result;
+    }
+
+    public List<PointFolder> getFolderPath(int pointId) {
+        List<PointFolder> path = new ArrayList<PointFolder>();
+        root.findPoint(path, pointId);
+        if (path.isEmpty())
+            path.add(root);
+        else
+            // findPoint returns the path in reverse order.
+            Collections.reverse(path);
+
+        return path;
     }
 
     public void parseEmptyFolders() {

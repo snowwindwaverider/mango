@@ -125,28 +125,31 @@ public class UserDao extends BaseDao {
     }
 
     private static final String USER_INSERT = "insert into users ("
-            + "  username, password, email, phone, admin, disabled, receiveAlarmEmails, receiveOwnAuditEvents) "
-            + "values (?,?,?,?,?,?,?,?)";
+            + "  username, password, email, phone, admin, disabled, homeUrl, receiveAlarmEmails, receiveOwnAuditEvents) "
+            + "values (?,?,?,?,?,?,?,?,?)";
 
     void insertUser(User user) {
-        int id = doInsert(USER_INSERT,
+        int id = doInsert(
+                USER_INSERT,
                 new Object[] { user.getUsername(), user.getPassword(), user.getEmail(), user.getPhone(),
-                        boolToChar(user.isAdmin()), boolToChar(user.isDisabled()), user.getReceiveAlarmEmails(),
-                        boolToChar(user.isReceiveOwnAuditEvents()) }, new int[] { Types.VARCHAR, Types.VARCHAR,
-                        Types.VARCHAR, Types.VARCHAR, Types.VARCHAR, Types.VARCHAR, Types.INTEGER, Types.VARCHAR });
+                        boolToChar(user.isAdmin()), boolToChar(user.isDisabled()), user.getHomeUrl(),
+                        user.getReceiveAlarmEmails(), boolToChar(user.isReceiveOwnAuditEvents()) }, new int[] {
+                        Types.VARCHAR, Types.VARCHAR, Types.VARCHAR, Types.VARCHAR, Types.VARCHAR, Types.VARCHAR,
+                        Types.VARCHAR, Types.INTEGER, Types.VARCHAR });
         user.setId(id);
         saveRelationalData(user);
     }
 
     private static final String USER_UPDATE = "update users set "
-            + "  username=?, password=?, email=?, phone=?, admin=?, disabled=?, receiveAlarmEmails=?, "
+            + "  username=?, password=?, email=?, phone=?, admin=?, disabled=?, homeUrl=?, receiveAlarmEmails=?, "
             + "  receiveOwnAuditEvents=? " + "where id=?";
 
     void updateUser(User user) {
-        ejt.update(USER_UPDATE,
+        ejt.update(
+                USER_UPDATE,
                 new Object[] { user.getUsername(), user.getPassword(), user.getEmail(), user.getPhone(),
-                        boolToChar(user.isAdmin()), boolToChar(user.isDisabled()), user.getReceiveAlarmEmails(),
-                        boolToChar(user.isReceiveOwnAuditEvents()), user.getId() });
+                        boolToChar(user.isAdmin()), boolToChar(user.isDisabled()), user.getHomeUrl(),
+                        user.getReceiveAlarmEmails(), boolToChar(user.isReceiveOwnAuditEvents()), user.getId() });
         saveRelationalData(user);
     }
 

@@ -794,12 +794,14 @@ function setDateRange(data) {
     $set("fromDay", data.fromDay);
     $set("fromHour", data.fromHour);
     $set("fromMinute", data.fromMinute);
+    $set("fromSecond", data.fromSecond);
     
     $set("toYear", data.toYear);
     $set("toMonth", data.toMonth);
     $set("toDay", data.toDay);
     $set("toHour", data.toHour);
     $set("toMinute", data.toMinute);
+    $set("toSecond", data.toSecond);
     updateDateRange();
 }
 
@@ -810,6 +812,7 @@ function updateDateRange() {
     setDisabled("fromDay", inception);
     setDisabled("fromHour", inception);
     setDisabled("fromMinute", inception);
+    setDisabled("fromSecond", inception);
     setDisabled("fromNone", false);
     
     var now = $get("toNone");
@@ -818,6 +821,7 @@ function updateDateRange() {
     setDisabled("toDay", now);
     setDisabled("toHour", now);
     setDisabled("toMinute", now);
+    setDisabled("toSecond", now);
     setDisabled("toNone", false);
 }
 

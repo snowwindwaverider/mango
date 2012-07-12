@@ -56,6 +56,10 @@ abstract public class TimeoutDetectorRT extends PointEventDetectorRT implements 
         super.initialize();
     }
 
+    protected boolean isJobScheduled() {
+        return task != null;
+    }
+
     @Override
     public void terminate() {
         super.terminate();
@@ -71,12 +75,22 @@ abstract public class TimeoutDetectorRT extends PointEventDetectorRT implements 
     }
 
     protected void scheduleJob(long timeout) {
+        if (task != null)
+            cancelTask();
         task = new TimeoutTask(new Date(timeout), this);
     }
 
     protected void unscheduleJob() {
         cancelTask();
     }
+
+    @Override
+    synchronized public final void scheduleTimeout(long fireTime) {
+        scheduleTimeoutImpl(fireTime);
+        task = null;
+    }
+
+    abstract protected void scheduleTimeoutImpl(long fireTime);
 
     synchronized private void cancelTask() {
         if (task != null) {

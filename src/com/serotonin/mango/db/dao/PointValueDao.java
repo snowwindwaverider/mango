@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.RejectedExecutionException;
 
 import javax.sql.DataSource;
 
@@ -51,6 +52,7 @@ import com.serotonin.mango.DataTypes;
 import com.serotonin.mango.ImageSaveException;
 import com.serotonin.mango.db.DatabaseAccess;
 import com.serotonin.mango.rt.dataImage.AnnotatedPointValueTime;
+import com.serotonin.mango.rt.dataImage.IdPointValueTime;
 import com.serotonin.mango.rt.dataImage.PointValueTime;
 import com.serotonin.mango.rt.dataImage.SetPointSource;
 import com.serotonin.mango.rt.dataImage.types.AlphanumericValue;
@@ -61,6 +63,7 @@ import com.serotonin.mango.rt.dataImage.types.MultistateValue;
 import com.serotonin.mango.rt.dataImage.types.NumericValue;
 import com.serotonin.mango.rt.maint.work.WorkItem;
 import com.serotonin.mango.vo.bean.LongPair;
+import com.serotonin.monitor.IntegerMonitor;
 import com.serotonin.util.queue.ObjectQueue;
 
 public class PointValueDao extends BaseDao {
@@ -108,7 +111,9 @@ public class PointValueDao extends BaseDao {
      * Only the PointValueCache should call this method during runtime. Do not use.
      */
     public void savePointValueAsync(int pointId, PointValueTime pointValue, SetPointSource source) {
-        savePointValueImpl(pointId, pointValue, source, true);
+        long id = savePointValueImpl(pointId, pointValue, source, true);
+        if (id != -1)
+            clearUnsavedPointValues();
     }
 
     long savePointValueImpl(final int pointId, final PointValueTime pointValue, final SetPointSource source,
@@ -188,8 +193,6 @@ public class PointValueDao extends BaseDao {
                 imageValue.setData(null);
             }
         }
-
-        clearUnsavedPointValues();
 
         return id;
     }
@@ -283,6 +286,11 @@ public class PointValueDao extends BaseDao {
                 new Object[] { dataPointId }, limit);
     }
 
+    public List<PointValueTime> getLatestPointValues(int dataPointId, int limit, long before) {
+        return pointValuesQuery(POINT_VALUE_SELECT + " where pv.dataPointId=? and pv.ts<? order by pv.ts desc",
+                new Object[] { dataPointId, before }, limit);
+    }
+
     public PointValueTime getLatestPointValue(int dataPointId) {
         long maxTs = ejt.queryForLong("select max(ts) from pointValues where dataPointId=?",
                 new Object[] { dataPointId }, 0);
@@ -329,31 +337,7 @@ public class PointValueDao extends BaseDao {
 
     class PointValueRowMapper implements GenericRowMapper<PointValueTime> {
         public PointValueTime mapRow(ResultSet rs, int rowNum) throws SQLException {
-            int dataType = rs.getInt(1);
-            MangoValue value;
-            switch (dataType) {
-            case (DataTypes.NUMERIC):
-                value = new NumericValue(rs.getDouble(2));
-                break;
-            case (DataTypes.BINARY):
-                value = new BinaryValue(rs.getDouble(2) == 1);
-                break;
-            case (DataTypes.MULTISTATE):
-                value = new MultistateValue(rs.getInt(2));
-                break;
-            case (DataTypes.ALPHANUMERIC):
-                String s = rs.getString(3);
-                if (s == null)
-                    s = rs.getString(4);
-                value = new AlphanumericValue(s);
-                break;
-            case (DataTypes.IMAGE):
-                value = new ImageValue(Integer.parseInt(rs.getString(3)), rs.getInt(2));
-                break;
-            default:
-                value = null;
-            }
-
+            MangoValue value = createMangoValue(rs, 1);
             long time = rs.getLong(5);
 
             int sourceType = rs.getInt(6);
@@ -364,6 +348,34 @@ public class PointValueDao extends BaseDao {
             // There was a source for the point value, so return an annotated version.
             return new AnnotatedPointValueTime(value, time, sourceType, rs.getInt(7));
         }
+    }
+
+    MangoValue createMangoValue(ResultSet rs, int firstParameter) throws SQLException {
+        int dataType = rs.getInt(firstParameter);
+        MangoValue value;
+        switch (dataType) {
+        case (DataTypes.NUMERIC):
+            value = new NumericValue(rs.getDouble(firstParameter + 1));
+            break;
+        case (DataTypes.BINARY):
+            value = new BinaryValue(rs.getDouble(firstParameter + 1) == 1);
+            break;
+        case (DataTypes.MULTISTATE):
+            value = new MultistateValue(rs.getInt(firstParameter + 1));
+            break;
+        case (DataTypes.ALPHANUMERIC):
+            String s = rs.getString(firstParameter + 2);
+            if (s == null)
+                s = rs.getString(firstParameter + 3);
+            value = new AlphanumericValue(s);
+            break;
+        case (DataTypes.IMAGE):
+            value = new ImageValue(Integer.parseInt(rs.getString(firstParameter + 2)), rs.getInt(firstParameter + 3));
+            break;
+        default:
+            value = null;
+        }
+        return value;
     }
 
     private void updateAnnotations(List<PointValueTime> values) {
@@ -405,6 +417,38 @@ public class PointValueDao extends BaseDao {
         }
     }
 
+    //
+    //
+    // Multiple-point callback for point history replays
+    //
+    private static final String POINT_ID_VALUE_SELECT = "select pv.dataPointId, pv.dataType, pv.pointValue, " //
+            + "pva.textPointValueShort, pva.textPointValueLong, pv.ts "
+            + "from pointValues pv "
+            + "  left join pointValueAnnotations pva on pv.id = pva.pointValueId";
+
+    public void getPointValuesBetween(List<Integer> dataPointIds, long from, long to,
+            MappedRowCallback<IdPointValueTime> callback) {
+        String ids = createDelimitedList(dataPointIds, ",", null);
+        query(POINT_ID_VALUE_SELECT + " where pv.dataPointId in (" + ids + ") and pv.ts >= ? and pv.ts<? order by ts",
+                new Object[] { from, to }, new IdPointValueRowMapper(), callback);
+    }
+
+    /**
+     * Note: this does not extract source information from the annotation.
+     */
+    class IdPointValueRowMapper implements GenericRowMapper<IdPointValueTime> {
+        public IdPointValueTime mapRow(ResultSet rs, int rowNum) throws SQLException {
+            int dataPointId = rs.getInt(1);
+            MangoValue value = createMangoValue(rs, 2);
+            long time = rs.getLong(6);
+            return new IdPointValueTime(dataPointId, value, time);
+        }
+    }
+
+    //
+    //
+    // Point value deletions
+    //
     public long deletePointValuesBefore(int dataPointId, long time) {
         return deletePointValues("delete from pointValues where dataPointId=? and ts<?", new Object[] { dataPointId,
                 time });
@@ -466,7 +510,7 @@ public class PointValueDao extends BaseDao {
             return null;
         return queryForObject(
                 "select min(ts), max(ts) from pointValues where dataPointId in ("
-                        + createDelimitedList(dataPointIds, ",", null) + ");", null, new GenericRowMapper<LongPair>() {
+                        + createDelimitedList(dataPointIds, ",", null) + ")", null, new GenericRowMapper<LongPair>() {
                     @Override
                     public LongPair mapRow(ResultSet rs, int index) throws SQLException {
                         long l = rs.getLong(1);
@@ -544,7 +588,12 @@ public class PointValueDao extends BaseDao {
         private static final CopyOnWriteArrayList<BatchWriteBehind> instances = new CopyOnWriteArrayList<BatchWriteBehind>();
         private static Log LOG = LogFactory.getLog(BatchWriteBehind.class);
         private static final int SPAWN_THRESHOLD = 10000;
+        private static final int MAX_INSTANCES = 5;
         private static int MAX_ROWS = 1000;
+        private static final IntegerMonitor ENTRIES_MONITOR = new IntegerMonitor("BatchWriteBehind.ENTRIES_MONITOR",
+                null);
+        private static final IntegerMonitor INSTANCES_MONITOR = new IntegerMonitor(
+                "BatchWriteBehind.INSTANCES_MONITOR", null);
 
         static {
             if (Common.ctx.getDatabaseAccess().getType() == DatabaseAccess.DatabaseType.DERBY)
@@ -559,15 +608,29 @@ public class PointValueDao extends BaseDao {
             else
                 throw new ShouldNeverHappenException("Unknown database type: "
                         + Common.ctx.getDatabaseAccess().getType());
+
+            Common.MONITORED_VALUES.addIfMissingStatMonitor(ENTRIES_MONITOR);
+            Common.MONITORED_VALUES.addIfMissingStatMonitor(INSTANCES_MONITOR);
         }
 
         static void add(BatchWriteBehindEntry e, ExtendedJdbcTemplate ejt) {
             synchronized (ENTRIES) {
                 ENTRIES.push(e);
-                if (instances.isEmpty() || ENTRIES.size() > SPAWN_THRESHOLD) {
-                    BatchWriteBehind bwb = new BatchWriteBehind(ejt);
-                    instances.add(bwb);
-                    Common.ctx.getBackgroundProcessing().addWorkItem(bwb);
+                ENTRIES_MONITOR.setValue(ENTRIES.size());
+                if (ENTRIES.size() > instances.size() * SPAWN_THRESHOLD) {
+                    if (instances.size() < MAX_INSTANCES) {
+                        BatchWriteBehind bwb = new BatchWriteBehind(ejt);
+                        instances.add(bwb);
+                        INSTANCES_MONITOR.setValue(instances.size());
+                        try {
+                            Common.ctx.getBackgroundProcessing().addWorkItem(bwb);
+                        }
+                        catch (RejectedExecutionException ree) {
+                            instances.remove(bwb);
+                            INSTANCES_MONITOR.setValue(instances.size());
+                            throw ree;
+                        }
+                    }
                 }
             }
         }
@@ -588,6 +651,7 @@ public class PointValueDao extends BaseDao {
 
                         inserts = new BatchWriteBehindEntry[ENTRIES.size() < MAX_ROWS ? ENTRIES.size() : MAX_ROWS];
                         ENTRIES.pop(inserts);
+                        ENTRIES_MONITOR.setValue(ENTRIES.size());
                     }
 
                     // Create the sql and parameters
@@ -602,7 +666,7 @@ public class PointValueDao extends BaseDao {
                     }
 
                     // Insert the data
-                    int retries = 5;
+                    int retries = 10;
                     while (true) {
                         try {
                             ejt.update(sb.toString(), params);
@@ -611,9 +675,22 @@ public class PointValueDao extends BaseDao {
                         catch (ConcurrencyFailureException e) {
                             if (retries <= 0) {
                                 LOG.error("Concurrency failure saving " + inserts.length
-                                        + " batch inserts after 5 tries. Data lost.");
+                                        + " batch inserts after 10 tries. Data lost.");
                                 break;
                             }
+
+                            int wait = (10 - retries) * 100;
+                            try {
+                                if (wait > 0) {
+                                    synchronized (this) {
+                                        wait(wait);
+                                    }
+                                }
+                            }
+                            catch (InterruptedException ie) {
+                                // no op
+                            }
+
                             retries--;
                         }
                         catch (RuntimeException e) {
@@ -625,6 +702,7 @@ public class PointValueDao extends BaseDao {
             }
             finally {
                 instances.remove(this);
+                INSTANCES_MONITOR.setValue(instances.size());
             }
         }
 

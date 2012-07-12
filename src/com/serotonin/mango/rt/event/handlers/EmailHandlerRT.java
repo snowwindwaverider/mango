@@ -29,18 +29,17 @@ import org.joda.time.DateTime;
 
 import com.serotonin.mango.Common;
 import com.serotonin.mango.db.dao.MailingListDao;
+import com.serotonin.mango.db.dao.SystemSettingsDao;
 import com.serotonin.mango.rt.event.EventInstance;
 import com.serotonin.mango.rt.event.type.SystemEventType;
 import com.serotonin.mango.rt.maint.work.EmailWorkItem;
-import com.serotonin.mango.util.freemarker.MangoEmailContent;
-import com.serotonin.mango.util.freemarker.MessageFormatDirective;
-import com.serotonin.mango.util.freemarker.UsedImagesDirective;
 import com.serotonin.mango.util.timeout.ModelTimeoutClient;
 import com.serotonin.mango.util.timeout.ModelTimeoutTask;
 import com.serotonin.mango.vo.event.EventHandlerVO;
+import com.serotonin.mango.web.email.MangoEmailContent;
+import com.serotonin.mango.web.email.UsedImagesDirective;
 import com.serotonin.timer.TimerTask;
 import com.serotonin.util.StringUtils;
-import com.serotonin.web.email.EmailContent;
 import com.serotonin.web.email.EmailInline;
 import com.serotonin.web.i18n.LocalizableMessage;
 
@@ -184,14 +183,17 @@ public class EmailHandlerRT extends EventHandlerRT implements ModelTimeoutClient
             // Send the email.
             Map<String, Object> model = new HashMap<String, Object>();
             model.put("evt", evt);
-            model.put("fmt", new MessageFormatDirective(bundle));
+            if (evt.getContext() != null)
+                model.putAll(evt.getContext());
             model.put("img", inlineImages);
-            EmailContent content = new MangoEmailContent(notificationType.getFile(), model, Common.UTF8);
+            model.put("instanceDescription", SystemSettingsDao.getValue(SystemSettingsDao.INSTANCE_DESCRIPTION));
+            MangoEmailContent content = new MangoEmailContent(notificationType.getFile(), model, bundle, subject,
+                    Common.UTF8);
 
             for (String s : inlineImages.getImageList())
                 content.addInline(new EmailInline.FileInline(s, Common.ctx.getServletContext().getRealPath(s)));
 
-            EmailWorkItem.queueEmail(toAddrs, subject, content);
+            EmailWorkItem.queueEmail(toAddrs, content);
         }
         catch (Exception e) {
             LOG.error("", e);

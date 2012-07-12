@@ -24,6 +24,7 @@ import javax.mail.internet.InternetAddress;
 import com.serotonin.mango.Common;
 import com.serotonin.mango.db.dao.SystemSettingsDao;
 import com.serotonin.mango.rt.event.type.SystemEventType;
+import com.serotonin.mango.web.email.MangoEmailContent;
 import com.serotonin.web.email.EmailContent;
 import com.serotonin.web.email.EmailSender;
 import com.serotonin.web.i18n.LocalizableMessage;
@@ -37,17 +38,17 @@ public class EmailWorkItem implements WorkItem {
         return WorkItem.PRIORITY_MEDIUM;
     }
 
-    public static void queueEmail(String toAddr, String subject, EmailContent content) throws AddressException {
-        queueEmail(new String[] { toAddr }, subject, content);
+    public static void queueEmail(String toAddr, MangoEmailContent content) throws AddressException {
+        queueEmail(new String[] { toAddr }, content);
     }
 
-    //    public static void queueEmail(String toAddr, String subject, EmailContent content, Runnable[] postSendExecution)
-    //            throws AddressException {
-    //        queueEmail(new String[] { toAddr }, subject, content, postSendExecution);
-    //    }
+    public static void queueEmail(String[] toAddrs, MangoEmailContent content) throws AddressException {
+        queueEmail(toAddrs, content, null);
+    }
 
-    public static void queueEmail(String[] toAddrs, String subject, EmailContent content) throws AddressException {
-        queueEmail(toAddrs, subject, content, null);
+    public static void queueEmail(String[] toAddrs, MangoEmailContent content, Runnable[] postSendExecution)
+            throws AddressException {
+        queueEmail(toAddrs, content.getSubject(), content, postSendExecution);
     }
 
     public static void queueEmail(String[] toAddrs, String subject, EmailContent content, Runnable[] postSendExecution)
@@ -73,19 +74,18 @@ public class EmailWorkItem implements WorkItem {
 
     public void execute() {
         try {
-            SystemSettingsDao systemSettingsDao = new SystemSettingsDao();
             if (fromAddress == null) {
-                String addr = systemSettingsDao.getValue(SystemSettingsDao.EMAIL_FROM_ADDRESS);
-                String pretty = systemSettingsDao.getValue(SystemSettingsDao.EMAIL_FROM_NAME);
+                String addr = SystemSettingsDao.getValue(SystemSettingsDao.EMAIL_FROM_ADDRESS);
+                String pretty = SystemSettingsDao.getValue(SystemSettingsDao.EMAIL_FROM_NAME);
                 fromAddress = new InternetAddress(addr, pretty);
             }
 
-            EmailSender emailSender = new EmailSender(systemSettingsDao.getValue(SystemSettingsDao.EMAIL_SMTP_HOST),
-                    systemSettingsDao.getIntValue(SystemSettingsDao.EMAIL_SMTP_PORT),
-                    systemSettingsDao.getBooleanValue(SystemSettingsDao.EMAIL_AUTHORIZATION),
-                    systemSettingsDao.getValue(SystemSettingsDao.EMAIL_SMTP_USERNAME),
-                    systemSettingsDao.getValue(SystemSettingsDao.EMAIL_SMTP_PASSWORD),
-                    systemSettingsDao.getBooleanValue(SystemSettingsDao.EMAIL_TLS));
+            EmailSender emailSender = new EmailSender(SystemSettingsDao.getValue(SystemSettingsDao.EMAIL_SMTP_HOST),
+                    SystemSettingsDao.getIntValue(SystemSettingsDao.EMAIL_SMTP_PORT),
+                    SystemSettingsDao.getBooleanValue(SystemSettingsDao.EMAIL_AUTHORIZATION),
+                    SystemSettingsDao.getValue(SystemSettingsDao.EMAIL_SMTP_USERNAME),
+                    SystemSettingsDao.getValue(SystemSettingsDao.EMAIL_SMTP_PASSWORD),
+                    SystemSettingsDao.getBooleanValue(SystemSettingsDao.EMAIL_TLS));
 
             emailSender.send(fromAddress, toAddresses, subject, content);
         }

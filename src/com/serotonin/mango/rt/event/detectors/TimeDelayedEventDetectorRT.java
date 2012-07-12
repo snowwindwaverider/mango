@@ -27,32 +27,48 @@ import com.serotonin.mango.rt.dataImage.PointValueTime;
  * @author Matthew Lohbihler
  */
 abstract public class TimeDelayedEventDetectorRT extends TimeoutDetectorRT {
-    @Override
-    synchronized protected void scheduleJob(long fromTime) {
+    synchronized protected void scheduleJob() {
         if (getDurationMS() > 0)
-            super.scheduleJob(fromTime + getDurationMS());
+            scheduleJob(System.currentTimeMillis() + getDurationMS());
         else
             // Otherwise call the event active immediately.
             setEventActive(true);
     }
 
-    @Override
-    synchronized protected void unscheduleJob() {
-        // Check whether there is a tolerance duration.
-        if (getDurationMS() > 0)
-            super.unscheduleJob();
-
+    synchronized protected void unscheduleJob(long conditionInactiveTime) {
         // Reset the eventActive if it is on
         if (isEventActive())
             setEventActive(false);
+        // Check whether there is a tolerance duration.
+        else if (getDurationMS() > 0) {
+            if (isJobScheduled()) {
+                unscheduleJob();
+
+                // There is an existing job scheduled. It's fire time is likely past when the event is to actually fire,
+                // so check if the event activation time 
+                long eventActiveTime = getConditionActiveTime() + getDurationMS();
+
+                if (eventActiveTime < conditionInactiveTime) {
+                    // The event should go active.
+                    raiseEvent(eventActiveTime, createEventContext());
+                    // And then go inactive
+                    returnToNormal(conditionInactiveTime);
+                }
+            }
+        }
     }
+
+    abstract protected long getConditionActiveTime();
 
     abstract void setEventActive(boolean b);
 
     @Override
     public void initialize() {
         super.initialize();
+        initializeState();
+    }
 
+    protected void initializeState() {
         int pointId = vo.njbGetDataPoint().getId();
         PointValueTime latest = Common.ctx.getRuntimeManager().getDataPoint(pointId).getPointValue();
 
@@ -60,14 +76,8 @@ abstract public class TimeDelayedEventDetectorRT extends TimeoutDetectorRT {
             pointChanged(null, latest);
     }
 
-    //
-    //
-    // /
-    // / TimeoutClient interface
-    // /
-    //
-    //
-    public void scheduleTimeout(long fireTime) {
+    @Override
+    public void scheduleTimeoutImpl(long fireTime) {
         setEventActive(true);
     }
 }

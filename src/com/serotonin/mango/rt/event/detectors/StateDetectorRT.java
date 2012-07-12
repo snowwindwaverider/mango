@@ -57,9 +57,9 @@ abstract public class StateDetectorRT extends TimeDelayedEventDetectorRT {
 
         if (stateActive)
             // Schedule a job that will call the event active if it runs.
-            scheduleJob(stateActiveTime);
+            scheduleJob();
         else
-            unscheduleJob();
+            unscheduleJob(stateInactiveTime);
     }
 
     abstract protected boolean stateDetected(PointValueTime newValue);
@@ -81,6 +81,11 @@ abstract public class StateDetectorRT extends TimeDelayedEventDetectorRT {
     }
 
     @Override
+    protected long getConditionActiveTime() {
+        return stateActiveTime;
+    }
+
+    @Override
     synchronized public void setEventActive(boolean b) {
         eventActive = b;
         if (eventActive) {
@@ -88,7 +93,7 @@ abstract public class StateDetectorRT extends TimeDelayedEventDetectorRT {
             if (stateActive)
                 // Ok, things are good. Carry on...
                 // Raise the event.
-                raiseEvent(stateActiveTime + getDurationMS());
+                raiseEvent(stateActiveTime + getDurationMS(), createEventContext());
             else {
                 // Perhaps the job wasn't successfully unscheduled. Write a log entry and ignore.
                 log.warn("Call to set event active when state is not active. Ignoring.");

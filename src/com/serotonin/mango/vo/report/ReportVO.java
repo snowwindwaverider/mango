@@ -84,6 +84,7 @@ public class ReportVO implements Serializable {
     private boolean email;
     private List<RecipientListEntryBean> recipients = new ArrayList<RecipientListEntryBean>();
     private boolean includeData = true;
+    private boolean zipData = false;
 
     public ReportVO() {
         // Default the specific date fields.
@@ -342,6 +343,14 @@ public class ReportVO implements Serializable {
         this.includeData = includeData;
     }
 
+    public boolean isZipData() {
+        return zipData;
+    }
+
+    public void setZipData(boolean zipData) {
+        this.zipData = zipData;
+    }
+
     public int getRunDelayMinutes() {
         return runDelayMinutes;
     }
@@ -355,7 +364,7 @@ public class ReportVO implements Serializable {
     // Serialization
     //
     private static final long serialVersionUID = -1;
-    private static final int version = 5;
+    private static final int version = 6;
 
     private void writeObject(ObjectOutputStream out) throws IOException {
         out.writeInt(version);
@@ -391,6 +400,7 @@ public class ReportVO implements Serializable {
         out.writeBoolean(email);
         out.writeObject(recipients);
         out.writeBoolean(includeData);
+        out.writeBoolean(zipData);
     }
 
     @SuppressWarnings("unchecked")
@@ -430,6 +440,7 @@ public class ReportVO implements Serializable {
             email = in.readBoolean();
             recipients = (List<RecipientListEntryBean>) in.readObject();
             includeData = in.readBoolean();
+            zipData = false;
         }
         else if (ver == 2) {
             points = convertToReportPointVOs((List<Integer>) in.readObject());
@@ -463,6 +474,7 @@ public class ReportVO implements Serializable {
             email = in.readBoolean();
             recipients = (List<RecipientListEntryBean>) in.readObject();
             includeData = in.readBoolean();
+            zipData = false;
         }
         else if (ver == 3) {
             points = convertToReportPointVOs((List<Integer>) in.readObject());
@@ -496,6 +508,7 @@ public class ReportVO implements Serializable {
             email = in.readBoolean();
             recipients = (List<RecipientListEntryBean>) in.readObject();
             includeData = in.readBoolean();
+            zipData = false;
         }
         else if (ver == 4) {
             points = convertToReportPointVOs((List<Integer>) in.readObject());
@@ -529,6 +542,7 @@ public class ReportVO implements Serializable {
             email = in.readBoolean();
             recipients = (List<RecipientListEntryBean>) in.readObject();
             includeData = in.readBoolean();
+            zipData = false;
         }
         else if (ver == 5) {
             points = (List<ReportPointVO>) in.readObject();
@@ -562,6 +576,41 @@ public class ReportVO implements Serializable {
             email = in.readBoolean();
             recipients = (List<RecipientListEntryBean>) in.readObject();
             includeData = in.readBoolean();
+            zipData = false;
+        }
+        else if (ver == 6) {
+            points = (List<ReportPointVO>) in.readObject();
+            includeEvents = in.readInt();
+            includeUserComments = in.readBoolean();
+            dateRangeType = in.readInt();
+            relativeDateType = in.readInt();
+
+            previousPeriodCount = in.readInt();
+            previousPeriodType = in.readInt();
+            pastPeriodCount = in.readInt();
+            pastPeriodType = in.readInt();
+
+            fromNone = in.readBoolean();
+            fromYear = in.readInt();
+            fromMonth = in.readInt();
+            fromDay = in.readInt();
+            fromHour = in.readInt();
+            fromMinute = in.readInt();
+            toNone = in.readBoolean();
+            toYear = in.readInt();
+            toMonth = in.readInt();
+            toDay = in.readInt();
+            toHour = in.readInt();
+            toMinute = in.readInt();
+
+            schedule = in.readBoolean();
+            schedulePeriod = in.readInt();
+            runDelayMinutes = in.readInt();
+            scheduleCron = SerializationHelper.readSafeUTF(in);
+            email = in.readBoolean();
+            recipients = (List<RecipientListEntryBean>) in.readObject();
+            includeData = in.readBoolean();
+            zipData = in.readBoolean();
         }
     }
 

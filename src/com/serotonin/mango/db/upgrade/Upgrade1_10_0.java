@@ -187,7 +187,7 @@ public class Upgrade1_10_0 extends DBUpgrade {
             "  inactiveSecond int,", //
             "  inactiveCron varchar(25),", //
             "  primary key (id)", //
-            ") type=InnoDB;", //
+            ") engine=InnoDB;", //
             "alter table maintenanceEvents add constraint maintenanceEventsUn1 unique (xid);", //
             "alter table maintenanceEvents add constraint maintenanceEventsFk1 foreign key (dataSourceId) references dataSources(id);", //
 

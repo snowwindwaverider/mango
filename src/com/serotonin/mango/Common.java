@@ -56,6 +56,7 @@ import com.serotonin.mango.view.custom.CustomView;
 import com.serotonin.mango.vo.CommPortProxy;
 import com.serotonin.mango.vo.User;
 import com.serotonin.mango.web.ContextWrapper;
+import com.serotonin.monitor.MonitoredValues;
 import com.serotonin.timer.CronTimerTrigger;
 import com.serotonin.timer.RealTimeTimer;
 import com.serotonin.util.PropertiesUtils;
@@ -78,13 +79,15 @@ public class Common {
     // This is initialized
     public static final RealTimeTimer timer = new RealTimeTimer();
 
+    public static final MonitoredValues MONITORED_VALUES = new MonitoredValues();
+
     /*
      * Updating the Mango version: - Create a DBUpdate subclass for the old version number. This may not do anything in
      * particular to the schema, but is still required to update the system settings so that the database has the
      * correct version.
      */
     public static final String getVersion() {
-        return "1.12.0";
+        return "1.12.4";
     }
 
     public interface ContextKeys {
@@ -310,7 +313,7 @@ public class Common {
 
     public static String getFiledataPath() {
         if (lazyFiledataPath == null) {
-            String name = new SystemSettingsDao().getValue(SystemSettingsDao.FILEDATA_PATH);
+            String name = SystemSettingsDao.getValue(SystemSettingsDao.FILEDATA_PATH);
             if (name.startsWith("~"))
                 name = ctx.getServletContext().getRealPath(name.substring(1));
 
@@ -423,10 +426,9 @@ public class Common {
         client.getHttpConnectionManager().setParams(managerParams);
         client.setParams(params);
 
-        SystemSettingsDao systemSettingsDao = new SystemSettingsDao();
-        if (systemSettingsDao.getBooleanValue(SystemSettingsDao.HTTP_CLIENT_USE_PROXY)) {
-            String proxyHost = systemSettingsDao.getValue(SystemSettingsDao.HTTP_CLIENT_PROXY_SERVER);
-            int proxyPort = systemSettingsDao.getIntValue(SystemSettingsDao.HTTP_CLIENT_PROXY_PORT);
+        if (SystemSettingsDao.getBooleanValue(SystemSettingsDao.HTTP_CLIENT_USE_PROXY)) {
+            String proxyHost = SystemSettingsDao.getValue(SystemSettingsDao.HTTP_CLIENT_PROXY_SERVER);
+            int proxyPort = SystemSettingsDao.getIntValue(SystemSettingsDao.HTTP_CLIENT_PROXY_PORT);
 
             // Set up the proxy configuration.
             client.getHostConfiguration().setProxy(proxyHost, proxyPort);
@@ -434,8 +436,8 @@ public class Common {
             // Set up the proxy credentials. All realms and hosts.
             client.getState().setProxyCredentials(
                     AuthScope.ANY,
-                    new UsernamePasswordCredentials(systemSettingsDao.getValue(
-                            SystemSettingsDao.HTTP_CLIENT_PROXY_USERNAME, ""), systemSettingsDao.getValue(
+                    new UsernamePasswordCredentials(SystemSettingsDao.getValue(
+                            SystemSettingsDao.HTTP_CLIENT_PROXY_USERNAME, ""), SystemSettingsDao.getValue(
                             SystemSettingsDao.HTTP_CLIENT_PROXY_PASSWORD, "")));
         }
 
@@ -464,7 +466,7 @@ public class Common {
         if (systemLanguage == null) {
             synchronized (i18nLock) {
                 if (systemLanguage == null) {
-                    systemLanguage = new SystemSettingsDao().getValue(SystemSettingsDao.LANGUAGE);
+                    systemLanguage = SystemSettingsDao.getValue(SystemSettingsDao.LANGUAGE);
                     Locale locale = findLocale(systemLanguage);
                     if (locale == null)
                         throw new IllegalArgumentException("Locale for given language not found: " + systemLanguage);

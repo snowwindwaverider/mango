@@ -74,8 +74,8 @@ public class ScriptExecutor {
         return converted;
     }
 
-    public PointValueTime execute(String script, Map<String, IDataPoint> context, long runtime, int dataTypeId,
-            long timestamp) throws ScriptException, ResultTypeException {
+    public PointValueTime execute(String script, Map<String, IDataPoint> context, long runtime,
+            int dataTypeId, long timestamp) throws ScriptException, ResultTypeException {
         ensureFunctions();
 
         // Create the script engine.

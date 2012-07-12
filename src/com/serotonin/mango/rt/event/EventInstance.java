@@ -19,6 +19,7 @@
 package com.serotonin.mango.rt.event;
 
 import java.util.List;
+import java.util.Map;
 
 import com.serotonin.mango.Common;
 import com.serotonin.mango.rt.event.handlers.EventHandlerRT;
@@ -99,8 +100,12 @@ public class EventInstance {
     private boolean userNotified;
     private boolean silenced;
 
+    //
+    // Contextual data from the source that raised the event.
+    private final Map<String, Object> context;
+
     public EventInstance(EventType eventType, long activeTimestamp, boolean rtnApplicable, int alarmLevel,
-            LocalizableMessage message) {
+            LocalizableMessage message, Map<String, Object> context) {
         this.eventType = eventType;
         this.activeTimestamp = activeTimestamp;
         this.rtnApplicable = rtnApplicable;
@@ -109,6 +114,7 @@ public class EventInstance {
             this.message = new LocalizableMessage("common.noMessage");
         else
             this.message = message;
+        this.context = context;
     }
 
     public LocalizableMessage getRtnMessage() {
@@ -144,6 +150,19 @@ public class EventInstance {
                 return new LocalizableMessage("events.ackedByDeletedUser");
             if (alternateAckSource == AlternateAcknowledgementSources.MAINTENANCE_MODE)
                 return new LocalizableMessage("events.ackedByMaintenance");
+        }
+
+        return null;
+    }
+
+    public LocalizableMessage getExportAckMessage() {
+        if (isAcknowledged()) {
+            if (acknowledgedByUserId != 0)
+                return new LocalizableMessage("events.export.ackedByUser", acknowledgedByUsername);
+            if (alternateAckSource == AlternateAcknowledgementSources.DELETED_USER)
+                return new LocalizableMessage("events.export.ackedByDeletedUser");
+            if (alternateAckSource == AlternateAcknowledgementSources.MAINTENANCE_MODE)
+                return new LocalizableMessage("events.export.ackedByMaintenance");
         }
 
         return null;
@@ -295,5 +314,9 @@ public class EventInstance {
 
     public void setAlternateAckSource(int alternateAckSource) {
         this.alternateAckSource = alternateAckSource;
+    }
+
+    public Map<String, Object> getContext() {
+        return context;
     }
 }

@@ -377,6 +377,10 @@ public class ImportTask extends ProgressiveTask {
                 try {
                     reader.populateObject(vo, dataPoint);
 
+                    // If the name is not provided, default to the XID
+                    if (StringUtils.isEmpty(vo.getName()))
+                        vo.setName(xid);
+
                     // Now validate it. Use a new response object so we can distinguish errors in this vo from
                     // other errors.
                     DwrResponseI18n voResponse = new DwrResponseI18n();
@@ -473,7 +477,7 @@ public class ImportTask extends ProgressiveTask {
             List<PointFolder> subfolders = reader.readPropertyValue(pointHierarchyJson, List.class, PointFolder.class);
             root.setSubfolders(subfolders);
 
-            for (DataPointVO dp : dataPointDao.getDataPoints(null)) {
+            for (DataPointVO dp : dataPointDao.getDataPoints(null, false)) {
                 dp.setPointFolderId(0);
                 dataPointDao.updateDataPointShallow(dp);
             }

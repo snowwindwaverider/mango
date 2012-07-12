@@ -61,10 +61,7 @@ import com.serotonin.web.taglib.Functions;
 public class ReportDao extends BaseDao {
     //
     //
-    // /
-    // / Report Templates
-    // /
-    //
+    // Report Templates
     //
     private static final String REPORT_SELECT = "select data, id, userId, name from reports ";
 
@@ -77,7 +74,7 @@ public class ReportDao extends BaseDao {
     }
 
     public ReportVO getReport(int id) {
-        return queryForObject(REPORT_SELECT + "where id=?", new Object[] { id }, new ReportRowMapper());
+        return queryForObject(REPORT_SELECT + "where id=?", new Object[] { id }, new ReportRowMapper(), null);
     }
 
     class ReportRowMapper implements GenericRowMapper<ReportVO> {
@@ -121,10 +118,7 @@ public class ReportDao extends BaseDao {
 
     //
     //
-    // /
-    // / Report Instances
-    // /
-    //
+    // Report Instances
     //
     private static final String REPORT_INSTANCE_SELECT = "select id, userId, name, includeEvents, includeUserComments, reportStartTime, reportEndTime, runStartTime, "
             + "  runEndTime, recordCount, preventPurge " + "from reportInstances ";
@@ -201,16 +195,18 @@ public class ReportDao extends BaseDao {
      * This method should only be called by the ReportWorkItem.
      */
     private static final String REPORT_INSTANCE_POINTS_INSERT = "insert into reportInstancePoints " //
-            + "(reportInstanceId, dataSourceName, pointName, dataType, startValue, textRenderer, colour) "
-            + "values (?,?,?,?,?,?,?)";
+            + "(reportInstanceId, dataSourceName, pointName, dataType, startValue, textRenderer, colour, consolidatedChart) "
+            + "values (?,?,?,?,?,?,?,?)";
 
     public static class PointInfo {
         private final DataPointVO point;
         private final String colour;
+        private final boolean consolidatedChart;
 
-        public PointInfo(DataPointVO point, String colour) {
+        public PointInfo(DataPointVO point, String colour, boolean consolidatedChart) {
             this.point = point;
             this.colour = colour;
+            this.consolidatedChart = consolidatedChart;
         }
 
         public DataPointVO getPoint() {
@@ -219,6 +215,10 @@ public class ReportDao extends BaseDao {
 
         public String getColour() {
             return colour;
+        }
+
+        public boolean isConsolidatedChart() {
+            return consolidatedChart;
         }
     }
 
@@ -272,11 +272,11 @@ public class ReportDao extends BaseDao {
 
             int reportPointId = doInsert(
                     REPORT_INSTANCE_POINTS_INSERT,
-                    new Object[] { instance.getId(), point.getDataSourceName(), name, dataType,
+                    new Object[] { instance.getId(), point.getDeviceName(), name, dataType,
                             DataTypes.valueToString(startValue),
-                            SerializationHelper.writeObject(point.getTextRenderer()), pointInfo.getColour() },
-                    new int[] { Types.INTEGER, Types.VARCHAR, Types.VARCHAR, Types.INTEGER, Types.VARCHAR, Types.BLOB,
-                            Types.VARCHAR });
+                            SerializationHelper.writeObject(point.getTextRenderer()), pointInfo.getColour(),
+                            boolToChar(pointInfo.isConsolidatedChart()) }, new int[] { Types.INTEGER, Types.VARCHAR,
+                            Types.VARCHAR, Types.INTEGER, Types.VARCHAR, Types.BLOB, Types.VARCHAR, Types.CHAR });
 
             // Insert the reportInstanceData records
             String insertSQL = "insert into reportInstanceData " + "  select id, " + reportPointId
@@ -410,7 +410,7 @@ public class ReportDao extends BaseDao {
      * ordered), and sorted by time ascending.
      */
     private static final String REPORT_INSTANCE_POINT_SELECT = "select id, dataSourceName, pointName, dataType, " // 
-            + "startValue, textRenderer, colour from reportInstancePoints ";
+            + "startValue, textRenderer, colour, consolidatedChart from reportInstancePoints ";
     private static final String REPORT_INSTANCE_DATA_SELECT = "select rd.pointValue, rda.textPointValueShort, " //
             + "  rda.textPointValueLong, rd.ts, rda.sourceValue "
             + "from reportInstanceData rd "
@@ -424,7 +424,7 @@ public class ReportDao extends BaseDao {
                     public ReportPointInfo mapRow(ResultSet rs, int rowNum) throws SQLException {
                         ReportPointInfo rp = new ReportPointInfo();
                         rp.setReportPointId(rs.getInt(1));
-                        rp.setDataSourceName(rs.getString(2));
+                        rp.setDeviceName(rs.getString(2));
                         rp.setPointName(rs.getString(3));
                         rp.setDataType(rs.getInt(4));
                         String startValue = rs.getString(5);
@@ -433,6 +433,7 @@ public class ReportDao extends BaseDao {
                         rp.setTextRenderer((TextRenderer) SerializationHelper.readObject(rs.getBlob(6)
                                 .getBinaryStream()));
                         rp.setColour(rs.getString(7));
+                        rp.setConsolidatedChart(charToBool(rs.getString(8)));
                         return rp;
                     }
                 });

@@ -152,7 +152,9 @@ public class ImageChartServlet extends BaseInfoServlet {
                         data = pointValueFacade.getPointValuesBetween(from, to);
 
                     DataPointVO dp = new DataPointDao().getDataPoint(dataPointId);
-                    if (dp.getPointLocator().getDataTypeId() == DataTypes.NUMERIC) {
+                    if (dp == null || dp.getName() == null)
+                        ; // no op
+                    else if (dp.getPointLocator().getDataTypeId() == DataTypes.NUMERIC) {
                         TimeSeries ts = new TimeSeries(dp.getName(), null, null, Second.class);
                         for (PointValueTime pv : data)
                             ImageChartUtils.addSecond(ts, pv.getTime(), pv.getValue().numberValue());

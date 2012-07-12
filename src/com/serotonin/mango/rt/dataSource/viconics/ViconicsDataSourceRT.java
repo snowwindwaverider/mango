@@ -50,9 +50,9 @@ import com.serotonin.mango.view.text.AnalogRenderer;
 import com.serotonin.mango.view.text.BinaryTextRenderer;
 import com.serotonin.mango.view.text.MultistateRenderer;
 import com.serotonin.mango.vo.DataPointVO;
+import com.serotonin.mango.vo.DataPointVO.LoggingTypes;
 import com.serotonin.mango.vo.User;
 import com.serotonin.mango.vo.WatchList;
-import com.serotonin.mango.vo.DataPointVO.LoggingTypes;
 import com.serotonin.mango.vo.dataSource.viconics.ViconicsDataSourceVO;
 import com.serotonin.mango.vo.dataSource.viconics.ViconicsPointLocatorVO;
 import com.serotonin.mango.vo.event.PointEventDetectorVO;
@@ -219,7 +219,7 @@ public class ViconicsDataSourceRT extends EventDataSource implements ViconicsNet
                 //
                 // Point hierarchy folder
                 if (folderId == -1) {
-                    PointHierarchy pointHierarchy = dataPointDao.getPointHierarchy(false);
+                    PointHierarchy pointHierarchy = dataPointDao.getPointHierarchy();
 
                     PointFolder root = pointHierarchy.getRoot();
                     PointFolder folder = null;
