@@ -46,7 +46,7 @@ public class PointChangeDetectorRT extends PointEventDetectorRT {
     public void pointChanged(PointValueTime oldValue, PointValueTime newValue) {
         this.oldValue = PointValueTime.getValue(oldValue);
         this.newValue = newValue.getValue();
-        raiseEvent(newValue.getTime());
+        raiseEvent(newValue.getTime(), createEventContext());
     }
 
     public boolean isEventActive() {

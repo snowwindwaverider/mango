@@ -92,7 +92,7 @@ public class EventDao extends BaseDao {
         args[7] = event.getAlarmLevel();
         args[8] = event.getMessage().serialize();
         if (!event.isAlarm()) {
-            event.setAcknowledgedTimestamp(System.currentTimeMillis());
+            event.setAcknowledgedTimestamp(event.getActiveTimestamp());
             args[9] = event.getAcknowledgedTimestamp();
         }
         event.setId(doInsert(EVENT_INSERT, args, EVENT_INSERT_TYPES));
@@ -109,10 +109,9 @@ public class EventDao extends BaseDao {
     private static final String EVENT_ACK = "update events set ackTs=?, ackUserId=?, alternateAckSource=? where id=? and ackTs is null";
     private static final String USER_EVENT_ACK = "update userEvents set silenced=? where eventId=?";
 
-    public void ackEvent(int eventId, int userId, int alternateAckSource) {
+    public void ackEvent(int eventId, long time, int userId, int alternateAckSource) {
         // Ack the event
-        ejt.update(EVENT_ACK, new Object[] { System.currentTimeMillis(), userId == 0 ? null : userId,
-                alternateAckSource, eventId });
+        ejt.update(EVENT_ACK, new Object[] { time, userId == 0 ? null : userId, alternateAckSource, eventId });
         // Silence the user events
         ejt.update(USER_EVENT_ACK, new Object[] { boolToChar(true), eventId });
         // Clear the cache
@@ -261,7 +260,7 @@ public class EventDao extends BaseDao {
             }
 
             EventInstance event = new EventInstance(type, rs.getLong(5), charToBool(rs.getString(6)), rs.getInt(9),
-                    message);
+                    message, null);
             event.setId(rs.getInt(1));
             long rtnTs = rs.getLong(7);
             if (!rs.wasNull())
@@ -359,8 +358,8 @@ public class EventDao extends BaseDao {
     }
 
     public List<EventInstance> search(int eventId, int eventSourceType, String status, int alarmLevel,
-            final String[] keywords, int userId, final ResourceBundle bundle, final int from, final int to,
-            final Date date) {
+            final String[] keywords, long dateFrom, long dateTo, int userId, final ResourceBundle bundle,
+            final int from, final int to, final Date date) {
         List<String> where = new ArrayList<String>();
         List<Object> params = new ArrayList<Object>();
 
@@ -397,6 +396,16 @@ public class EventDao extends BaseDao {
             params.add(alarmLevel);
         }
 
+        if (dateFrom != -1) {
+            where.add("activeTs>=?");
+            params.add(dateFrom);
+        }
+
+        if (dateTo != -1) {
+            where.add("activeTs<?");
+            params.add(dateTo);
+        }
+
         if (!where.isEmpty()) {
             for (String s : where) {
                 sql.append(" and ");
@@ -405,7 +414,7 @@ public class EventDao extends BaseDao {
         }
         sql.append(" order by e.activeTs desc");
 
-        final List<EventInstance> results = new ArrayList<EventInstance>(to - from);
+        final List<EventInstance> results = new ArrayList<EventInstance>();
         final UserEventInstanceRowMapper rowMapper = new UserEventInstanceRowMapper();
 
         final int[] data = new int[2];

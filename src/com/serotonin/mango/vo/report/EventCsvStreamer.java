@@ -50,7 +50,7 @@ public class EventCsvStreamer {
         for (EventInstance event : events) {
             data[0] = Integer.toString(event.getId());
             data[1] = AlarmLevels.getAlarmLevelMessage(event.getAlarmLevel()).getLocalizedMessage(bundle);
-            data[2] = event.getPrettyActiveTimestamp();
+            data[2] = event.getFullPrettyActiveTimestamp();
             data[3] = event.getMessage().getLocalizedMessage(bundle);
 
             if (event.isActive())
@@ -63,7 +63,7 @@ public class EventCsvStreamer {
             if (event.isAcknowledged()) {
                 data[5] = event.getFullPrettyAcknowledgedTimestamp();
 
-                LocalizableMessage ack = event.getAckMessage();
+                LocalizableMessage ack = event.getExportAckMessage();
                 if (ack == null)
                     data[6] = "";
                 else

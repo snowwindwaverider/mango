@@ -51,6 +51,7 @@
       <c:if test="${displayPagination}">|</c:if>
       <a href="#" onclick="jumpToDate(this);return false;"><fmt:message key="events.jumpToDate"/></a>
       | <fmt:message key="events.listed"><fmt:param value="${fn:length(events)}"/></fmt:message>
+      | <tag:img id="exportEventsImg" png="bullet_down" title="events.export" onclick="exportEvents()"/>
     </div>
   </c:if>
   <div style="clear:both;"></div>

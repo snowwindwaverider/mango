@@ -45,12 +45,10 @@ abstract public class DBUpgrade extends BaseDao {
     protected static final String DEFAULT_DATABASE_TYPE = "*";
 
     public static void checkUpgrade() {
-        SystemSettingsDao systemSettingsDao = new SystemSettingsDao();
-
         // If this is a very old version of the system, there may be multiple upgrades to run, so start a loop.
         while (true) {
             // Get the current schema version.
-            String schemaVersion = systemSettingsDao.getValue(SystemSettingsDao.DATABASE_SCHEMA_VERSION);
+            String schemaVersion = SystemSettingsDao.getValue(SystemSettingsDao.DATABASE_SCHEMA_VERSION);
 
             // Convert the schema version to the class name convention. This simply means replacing dots with
             // underscores and prefixing 'Upgrade' and this package.
@@ -85,7 +83,8 @@ abstract public class DBUpgrade extends BaseDao {
             try {
                 LOG.warn("Upgrading instance from " + schemaVersion + " to " + upgrade.getNewSchemaVersion());
                 upgrade.upgrade();
-                systemSettingsDao.setValue(SystemSettingsDao.DATABASE_SCHEMA_VERSION, upgrade.getNewSchemaVersion());
+                new SystemSettingsDao().setValue(SystemSettingsDao.DATABASE_SCHEMA_VERSION,
+                        upgrade.getNewSchemaVersion());
             }
             catch (Exception e) {
                 throw new ShouldNeverHappenException(e);

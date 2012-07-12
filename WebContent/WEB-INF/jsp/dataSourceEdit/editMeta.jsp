@@ -36,6 +36,23 @@
       createContextualMessageNode("contextContainer", "context");
   }
   
+  function appendPointListColumnFunctions(pointListColumnHeaders, pointListColumnFunctions) {
+      pointListColumnHeaders.push("");
+      pointListColumnFunctions.push(function(p) {
+          var id = "generateImg"+ p.id;
+          var onclick = "generateHistory("+ p.id +")";
+          return writeImage(id, null, "clock-history", "<fmt:message key="dsEdit.meta.generate"/>", onclick);
+      });
+  }
+  
+  function generateHistory(pointId) {
+      startImageFader("generateImg"+ pointId, true);
+	  DataSourceEditDwr.generateMetaPointHistory(pointId, function(result) {
+	      stopImageFader("generateImg"+ pointId);
+	      alert(result);
+	  });
+  }
+  
   function saveDataSourceImpl() {
       DataSourceEditDwr.saveMetaDataSource($get("dataSourceName"), $get("dataSourceXid"), saveDataSourceCB);
   }
@@ -48,6 +65,7 @@
       
       $set("script", locator.script);
       $set("dataTypeId", locator.dataTypeId);
+      $set("settable", locator.settable);
       $set("updateEvent", locator.updateEvent);
       $set("updateCronPattern", locator.updateCronPattern);
       $set("executionDelaySeconds", locator.executionDelaySeconds);
@@ -56,11 +74,10 @@
   }
   
   function savePointImpl(locator) {
-      delete locator.settable;
-      
       locator.context = createContextArray();
       locator.script = $get("script");
       locator.dataTypeId = $get("dataTypeId");
+      locator.settable = $get("settable");
       locator.updateEvent = $get("updateEvent");
       locator.updateCronPattern = $get("updateCronPattern");
       locator.executionDelaySeconds = $get("executionDelaySeconds");
@@ -191,6 +208,11 @@
         <tag:dataTypeOptions excludeImage="true"/>
       </select>
     </td>
+  </tr>
+  
+  <tr>
+    <td class="formLabelRequired"><fmt:message key="dsEdit.settable"/></td>
+    <td class="formField"><input type="checkbox" id="settable"/></td>
   </tr>
   
   <tr>

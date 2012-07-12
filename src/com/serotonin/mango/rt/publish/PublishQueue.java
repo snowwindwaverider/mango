@@ -72,6 +72,10 @@ public class PublishQueue<T extends PublishedPointVO> {
         sizeCheck();
     }
 
+    public int getSize() {
+        return queue.size();
+    }
+
     private void sizeCheck() {
         if (warningActive) {
             if (queue.size() <= warningSize) {

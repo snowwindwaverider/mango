@@ -43,7 +43,7 @@ import com.serotonin.mango.Common;
  */
 abstract public class BasePooledAccess extends DatabaseAccess {
     private final Log log = LogFactory.getLog(BasePooledAccess.class);
-    private BasicDataSource dataSource;
+    protected BasicDataSource dataSource;
 
     public BasePooledAccess(ServletContext ctx) {
         super(ctx);

@@ -26,15 +26,16 @@ import com.serotonin.mango.view.text.TextRenderer;
  */
 public class ReportPointInfo {
     private int reportPointId;
-    private String dataSourceName;
+    private String deviceName;
     private String pointName;
     private int dataType;
     private MangoValue startValue;
     private TextRenderer textRenderer;
     private String colour;
+    private boolean consolidatedChart;
 
     public String getExtendedName() {
-        return dataSourceName + " - " + pointName;
+        return deviceName + " - " + pointName;
     }
 
     public int getReportPointId() {
@@ -45,12 +46,12 @@ public class ReportPointInfo {
         this.reportPointId = reportPointId;
     }
 
-    public String getDataSourceName() {
-        return dataSourceName;
+    public String getDeviceName() {
+        return deviceName;
     }
 
-    public void setDataSourceName(String dataSourceName) {
-        this.dataSourceName = dataSourceName;
+    public void setDeviceName(String deviceName) {
+        this.deviceName = deviceName;
     }
 
     public String getPointName() {
@@ -91,5 +92,13 @@ public class ReportPointInfo {
 
     public void setColour(String colour) {
         this.colour = colour;
+    }
+
+    public boolean isConsolidatedChart() {
+        return consolidatedChart;
+    }
+
+    public void setConsolidatedChart(boolean consolidatedChart) {
+        this.consolidatedChart = consolidatedChart;
     }
 }

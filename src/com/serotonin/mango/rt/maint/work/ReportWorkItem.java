@@ -18,10 +18,16 @@
  */
 package com.serotonin.mango.rt.maint.work;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ResourceBundle;
 import java.util.Set;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import javax.mail.internet.AddressException;
 
@@ -30,6 +36,7 @@ import org.apache.commons.logging.LogFactory;
 import org.joda.time.DateTime;
 
 import com.serotonin.InvalidArgumentException;
+import com.serotonin.io.StreamUtils;
 import com.serotonin.mango.Common;
 import com.serotonin.mango.db.dao.DataPointDao;
 import com.serotonin.mango.db.dao.MailingListDao;
@@ -87,10 +94,11 @@ public class ReportWorkItem implements WorkItem {
         LOG.info("Queued report with id " + report.getId() + ", instance id " + reportInstance.getId());
     }
 
-    private ReportVO reportConfig;
+    ReportVO reportConfig;
     private User user;
     private ReportDao reportDao;
     private ReportInstance reportInstance;
+    List<File> filesToDelete = new ArrayList<File>();
 
     public void execute() {
         LOG.info("Running report with id " + reportConfig.getId() + ", instance id " + reportInstance.getId());
@@ -114,7 +122,7 @@ public class ReportWorkItem implements WorkItem {
                     // Should never happen since the colour would have been validated on save, so just let it go 
                     // as null.
                 }
-                points.add(new ReportDao.PointInfo(point, colour));
+                points.add(new ReportDao.PointInfo(point, colour, reportPoint.isConsolidatedChart()));
             }
         }
 
@@ -172,14 +180,9 @@ public class ReportWorkItem implements WorkItem {
 
             // Check if we need to attach the data.
             if (reportConfig.isIncludeData()) {
-                emailContent.addAttachment(new EmailAttachment.FileAttachment(reportInstance.getName() + ".csv",
-                        creator.getExportFile()));
-                if (creator.getEventFile() != null)
-                    emailContent.addAttachment(new EmailAttachment.FileAttachment(reportInstance.getName()
-                            + "Events.csv", creator.getEventFile()));
-                if (creator.getCommentFile() != null)
-                    emailContent.addAttachment(new EmailAttachment.FileAttachment(reportInstance.getName()
-                            + "Comments.csv", creator.getCommentFile()));
+                addFileAttachment(emailContent, reportInstance.getName() + ".csv", creator.getExportFile());
+                addFileAttachment(emailContent, reportInstance.getName() + "Events.csv", creator.getEventFile());
+                addFileAttachment(emailContent, reportInstance.getName() + "Comments.csv", creator.getCommentFile());
             }
 
             Runnable[] postEmail = null;
@@ -187,12 +190,10 @@ public class ReportWorkItem implements WorkItem {
                 // See that the temp file(s) gets deleted after the email is sent.
                 Runnable deleteTempFile = new Runnable() {
                     public void run() {
-                        if (!creator.getExportFile().delete())
-                            LOG.warn("Temp file " + creator.getExportFile().getPath() + " not deleted");
-                        if (creator.getEventFile() != null && !creator.getEventFile().delete())
-                            LOG.warn("Temp file " + creator.getEventFile().getPath() + " not deleted");
-                        if (creator.getCommentFile() != null && !creator.getCommentFile().delete())
-                            LOG.warn("Temp file " + creator.getCommentFile().getPath() + " not deleted");
+                        for (File file : filesToDelete) {
+                            if (!file.delete())
+                                LOG.warn("Temp file " + file.getPath() + " not deleted");
+                        }
                     }
                 };
                 postEmail = new Runnable[] { deleteTempFile };
@@ -216,5 +217,35 @@ public class ReportWorkItem implements WorkItem {
     private void addImage(EmailContent emailContent, String imagePath) {
         emailContent.addInline(new EmailInline.FileInline(imagePath, Common.ctx.getServletContext().getRealPath(
                 imagePath)));
+    }
+
+    private void addFileAttachment(EmailContent emailContent, String name, File file) {
+        if (file != null) {
+            if (reportConfig.isZipData()) {
+                try {
+                    File zipFile = File.createTempFile("tempZIP", ".zip");
+                    ZipOutputStream zipOut = new ZipOutputStream(new FileOutputStream(zipFile));
+                    zipOut.putNextEntry(new ZipEntry(name));
+
+                    FileInputStream in = new FileInputStream(file);
+                    StreamUtils.transfer(in, zipOut);
+                    in.close();
+
+                    zipOut.closeEntry();
+                    zipOut.close();
+
+                    emailContent.addAttachment(new EmailAttachment.FileAttachment(name + ".zip", zipFile));
+
+                    filesToDelete.add(zipFile);
+                }
+                catch (IOException e) {
+                    LOG.error("Failed to create zip file", e);
+                }
+            }
+            else
+                emailContent.addAttachment(new EmailAttachment.FileAttachment(name, file));
+
+            filesToDelete.add(file);
+        }
     }
 }

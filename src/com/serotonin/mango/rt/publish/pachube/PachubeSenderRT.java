@@ -110,6 +110,7 @@ public class PachubeSenderRT extends PublisherRT<PachubePointVO> {
             }
         }
 
+        @SuppressWarnings("synthetic-access")
         private boolean send(PublishQueueEntry<PachubePointVO> entry) {
             PachubePointVO point = entry.getVo();
 
@@ -153,7 +154,7 @@ public class PachubeSenderRT extends PublisherRT<PachubePointVO> {
 
                 if (failureCount == MAX_FAILURES + 1)
                     Common.ctx.getEventManager().raiseEvent(sendExceptionEventType, System.currentTimeMillis(), true,
-                            AlarmLevels.URGENT, failureMessage);
+                            AlarmLevels.URGENT, failureMessage, createEventContext());
 
                 return permanentFailure;
             }

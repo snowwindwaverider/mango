@@ -120,6 +120,7 @@ public class HttpSenderRT extends PublisherRT<HttpPointVO> {
             }
         }
 
+        @SuppressWarnings("synthetic-access")
         private boolean send(List<PublishQueueEntry<HttpPointVO>> list) {
             // Prepare the message
             NameValuePair[] params = createNVPs(vo.getStaticParameters(), list);
@@ -153,7 +154,7 @@ public class HttpSenderRT extends PublisherRT<HttpPointVO> {
                         if (!StringUtils.isEmpty(result))
                             Common.ctx.getEventManager().raiseEvent(resultWarningsEventType,
                                     System.currentTimeMillis(), false, AlarmLevels.INFORMATION,
-                                    new LocalizableMessage("common.default", result));
+                                    new LocalizableMessage("common.default", result), createEventContext());
                     }
                 }
                 else
@@ -174,7 +175,7 @@ public class HttpSenderRT extends PublisherRT<HttpPointVO> {
 
                 if (failureCount == MAX_FAILURES + 1)
                     Common.ctx.getEventManager().raiseEvent(sendExceptionEventType, System.currentTimeMillis(), true,
-                            AlarmLevels.URGENT, failureMessage);
+                            AlarmLevels.URGENT, failureMessage, createEventContext());
 
                 return false;
             }

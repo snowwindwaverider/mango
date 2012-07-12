@@ -43,79 +43,88 @@
                 appendReport(response.data.reports[i].id);
                 updateReport(response.data.reports[i].id, response.data.reports[i].name);
             }
-      });
+            
+            <c:if test="${!empty param.wlid}">
+              ReportsDwr.createReportFromWatchlist(${param.wlid}, loadReportCB);
+            </c:if>
+        });
     }
     
     function loadReport(reportId, copy) {
-    	if (!copy)
-    		copy = false;
         if (selectedReport)
             stopImageFader("r"+ selectedReport.id +"Img");
-        ReportsDwr.getReport(reportId, copy, function(report) {
-            if (!selectedReport)
-                show($("reportDetails"));
-            selectedReport = report;
-            
-            $set("name", report.name);
-            reportPointsArray = new Array();
-            for (var i=0; i<report.points.length; i++)
-                addToReportPointsArray(report.points[i].pointId, report.points[i].colour);
-            $set("includeEvents", report.includeEvents);
-            $set("includeUserComments", report.includeUserComments);
-            $set("dateRangeType", report.dateRangeType);
-            $set("relativeType", report.relativeDateType);
-            $set("prevPeriodCount", report.previousPeriodCount);
-            $set("prevPeriodType", report.previousPeriodType);
-            $set("pastPeriodCount", report.pastPeriodCount);
-            $set("pastPeriodType", report.pastPeriodType);
-            
-            $set("fromYear", report.fromYear);
-            $set("fromMonth", report.fromMonth);
-            $set("fromDay", report.fromDay);
-            $set("fromHour", report.fromHour);
-            $set("fromMinute", report.fromMinute);
-            $set("fromNone", report.fromNone);
-            
-            $set("toYear", report.toYear);
-            $set("toMonth", report.toMonth);
-            $set("toDay", report.toDay);
-            $set("toHour", report.toHour);
-            $set("toMinute", report.toMinute);
-            $set("toNone", report.toNone);
-            
-            $set("schedule", report.schedule);
-            $set("schedulePeriod", report.schedulePeriod);
-            $set("runDelayMinutes", report.runDelayMinutes);
-            $set("scheduleCron", report.scheduleCron);
-            
-            $set("email", report.email);
-            $set("includeData", report.includeData);
-            emailRecipients.updateRecipientList(report.recipients);
-            
-            showMessage("userMessage");
-      
-            writeReportPointsArray();
-            updateDateRangeFields();
-            updateScheduleFields();
-            updateSchedulePeriodFields();
-            updateEmailFields();
-        });
+        
+        ReportsDwr.getReport(reportId, copy, loadReportCB);
         
         if (copy)
-        	reportId = <c:out value="<%= Common.NEW_ID %>"/>;
+            reportId = <c:out value="<%= Common.NEW_ID %>"/>;
         
         startImageFader("r"+ reportId +"Img");
         display("deleteImg", reportId != <c:out value="<%= Common.NEW_ID %>"/>);
         display("copyImg", reportId != <c:out value="<%= Common.NEW_ID %>"/>);
     }
     
+    function loadReportCB(report) {
+        if (!report)
+            return;
+        if (!selectedReport)
+            show($("reportDetails"));
+        selectedReport = report;
+        
+        $set("name", report.name);
+        reportPointsArray = new Array();
+        for (var i=0; i<report.points.length; i++)
+            addToReportPointsArray(report.points[i].pointId, report.points[i].colour,
+                    report.points[i].consolidatedChart);
+        $set("includeEvents", report.includeEvents);
+        $set("includeUserComments", report.includeUserComments);
+        $set("dateRangeType", report.dateRangeType);
+        $set("relativeType", report.relativeDateType);
+        $set("prevPeriodCount", report.previousPeriodCount);
+        $set("prevPeriodType", report.previousPeriodType);
+        $set("pastPeriodCount", report.pastPeriodCount);
+        $set("pastPeriodType", report.pastPeriodType);
+        
+        $set("fromYear", report.fromYear);
+        $set("fromMonth", report.fromMonth);
+        $set("fromDay", report.fromDay);
+        $set("fromHour", report.fromHour);
+        $set("fromMinute", report.fromMinute);
+        $set("fromNone", report.fromNone);
+        
+        $set("toYear", report.toYear);
+        $set("toMonth", report.toMonth);
+        $set("toDay", report.toDay);
+        $set("toHour", report.toHour);
+        $set("toMinute", report.toMinute);
+        $set("toNone", report.toNone);
+        
+        $set("schedule", report.schedule);
+        $set("schedulePeriod", report.schedulePeriod);
+        $set("runDelayMinutes", report.runDelayMinutes);
+        $set("scheduleCron", report.scheduleCron);
+        
+        $set("email", report.email);
+        $set("includeData", report.includeData);
+        $set("zipData", report.zipData);
+        emailRecipients.updateRecipientList(report.recipients);
+        
+        showMessage("userMessage");
+  
+        writeReportPointsArray();
+        updateDateRangeFields();
+        updateScheduleFields();
+        updateSchedulePeriodFields();
+        updateEmailFields();
+    }
+    
     function addPointToReport() {
         var pointId = $get("allPointsList");
-        addToReportPointsArray(pointId, "");
+        addToReportPointsArray(pointId, "", true);
         writeReportPointsArray();
     }
     
-    function addToReportPointsArray(pointId, colour) {
+    function addToReportPointsArray(pointId, colour, consolidatedChart) {
         var data = getPointData(pointId);
         if (data) {
             // Missing names imply that the point was deleted, so ignore.
@@ -123,7 +132,8 @@
                 pointId: pointId,
                 pointName : data.name,
                 pointType : data.dataTypeMessage,
-                colour : !colour ? "" : colour
+                colour : !colour ? (!data.chartColour ? "" : data.chartColour) : colour,
+                consolidatedChart : consolidatedChart
             };
         }
     }
@@ -150,8 +160,12 @@
                     function(data) { return data.pointName; },
                     function(data) { return data.pointType; },
                     function(data) {
-                    	    return "<input type='text' value='"+ data.colour +"' "+
-                    	            "onblur='updatePointColour("+ data.pointId +", this.value)'/>";
+                            return "<input type='text' value='"+ data.colour +"' "+
+                                    "onblur='updatePointColour("+ data.pointId +", this.value)'/>";
+                    },
+                    function(data) {
+                        return "<input type='checkbox'"+ (data.consolidatedChart ? " checked='checked'" : "") +
+                                " onclick='updatePointConsolidatedChart("+ data.pointId +", this.checked)'/>";
                     },
                     function(data) { 
                             return "<img src='images/bullet_delete.png' class='ptr' "+
@@ -163,6 +177,12 @@
                         var tr = document.createElement("tr");
                         tr.className = "smRow"+ (options.rowIndex % 2 == 0 ? "" : "Alt");
                         return tr;
+                    },
+                    cellCreator:function(options) {
+                        var td = document.createElement("td");
+                        if (options.cellNum == 3)
+                            td.align = "center";
+                        return td;
                     }
                 });
         }
@@ -170,9 +190,15 @@
     }
     
     function updatePointColour(pointId, colour) {
-    	var item = getElement(reportPointsArray, pointId, "pointId");
-    	if (item)
-    		item["colour"] = colour;
+        var item = getElement(reportPointsArray, pointId, "pointId");
+        if (item)
+            item["colour"] = colour;
+    }
+    
+    function updatePointConsolidatedChart(pointId, consolidatedChart) {
+        var item = getElement(reportPointsArray, pointId, "pointId");
+        if (item)
+            item["consolidatedChart"] = consolidatedChart;
     }
     
     function updatePointsList() {
@@ -276,7 +302,7 @@
     }
     
     function exportEventData(name, instanceId) {
-        window.location = "eventExport/"+ name +"Events.csv?instanceId="+ instanceId;
+        window.location = "reportEventExport/"+ name +"Events.csv?instanceId="+ instanceId;
     }
     
     function exportUserComments(name, instanceId) {
@@ -370,7 +396,8 @@
     function getReportPointIdsArray() {
         var points = new Array();
         for (var i=0; i<reportPointsArray.length; i++)
-            points[points.length] = { pointId: reportPointsArray[i].pointId, colour: reportPointsArray[i].colour };
+            points[points.length] = { pointId: reportPointsArray[i].pointId, colour: reportPointsArray[i].colour,
+                    consolidatedChart: reportPointsArray[i].consolidatedChart };
         return points;
     }
     
@@ -381,7 +408,7 @@
                 $get("fromYear"), $get("fromMonth"), $get("fromDay"), $get("fromHour"), $get("fromMinute"),
                 $get("toNone"), $get("toYear"), $get("toMonth"), $get("toDay"), $get("toHour"), $get("toMinute"),
                 $get("schedule"), $get("schedulePeriod"), $get("runDelayMinutes"), $get("scheduleCron"), $get("email"),
-                $get("includeData"), emailRecipients.createRecipientArray(), function(response) {
+                $get("includeData"), $get("zipData"), emailRecipients.createRecipientArray(), function(response) {
             stopImageFader("saveImg");
             clearMessages();
             
@@ -450,7 +477,7 @@
                 $get("prevPeriodType"), $get("pastPeriodCount"), $get("pastPeriodType"), $get("fromNone"),
                 $get("fromYear"), $get("fromMonth"), $get("fromDay"), $get("fromHour"), $get("fromMinute"),
                 $get("toNone"), $get("toYear"), $get("toMonth"), $get("toDay"), $get("toHour"), $get("toMinute"),
-                $get("email"), $get("includeData"), emailRecipients.createRecipientArray(), function(response) {
+                $get("email"), $get("includeData"), $get("zipData"), emailRecipients.createRecipientArray(), function(response) {
             stopImageFader("runImg");
             clearMessages();
             
@@ -509,12 +536,12 @@
                 <tag:help id="reportTemplates"/>
               </td>
               <td align="right"><tag:img png="report_add" title="reports.newReport"
-                      onclick="loadReport(${applicationScope['constants.Common.NEW_ID']})"
+                      onclick="loadReport(${applicationScope['constants.Common.NEW_ID']}, false)"
                       id="r${applicationScope['constants.Common.NEW_ID']}Img"/></td>
             </tr>
           </table>
           <table id="reportsTable">
-            <tbody id="r_TEMPLATE_" onclick="loadReport(getMangoId(this))" class="ptr" style="display:none;"><tr>
+            <tbody id="r_TEMPLATE_" onclick="loadReport(getMangoId(this), false)" class="ptr" style="display:none;"><tr>
               <td><tag:img id="r_TEMPLATE_Img" png="report" title="reports.report"/></td>
               <td class="link" id="r_TEMPLATE_Name"></td>
             </tr></tbody>
@@ -564,6 +591,7 @@
                       <td><fmt:message key="reports.pointName"/></td>
                       <td><fmt:message key="reports.dataType"/></td>
                       <td><fmt:message key="reports.colour"/></td>
+                      <td><fmt:message key="reports.consolidatedChart"/></td>
                       <td></td>
                     </tr>
                   </tbody>
@@ -717,6 +745,11 @@
               <tr>
                 <td class="formLabelRequired"><fmt:message key="reports.includeTabular"/></td>
                 <td class="formField"><input type="checkbox" id="includeData"/></td>
+              </tr>
+              
+              <tr>
+                <td class="formLabelRequired"><fmt:message key="reports.zipData"/></td>
+                <td class="formField"><input type="checkbox" id="zipData"/></td>
               </tr>
             </tbody>
             

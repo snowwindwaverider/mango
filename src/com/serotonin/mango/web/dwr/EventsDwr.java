@@ -34,8 +34,11 @@ import com.serotonin.mango.db.dao.EventDao;
 import com.serotonin.mango.rt.event.EventInstance;
 import com.serotonin.mango.util.DateUtils;
 import com.serotonin.mango.vo.User;
+import com.serotonin.mango.vo.bean.LongPair;
+import com.serotonin.mango.web.dwr.beans.EventExportDefinition;
 import com.serotonin.util.StringUtils;
 import com.serotonin.web.dwr.DwrResponseI18n;
+import com.serotonin.web.dwr.MethodFilter;
 import com.serotonin.web.i18n.LocalizableMessage;
 
 public class EventsDwr extends BaseDwr {
@@ -47,37 +50,39 @@ public class EventsDwr extends BaseDwr {
     public static final String STATUS_RTN = "R";
     public static final String STATUS_NORTN = "N";
 
+    public static final int DATE_RANGE_TYPE_NONE = 1;
+    public static final int DATE_RANGE_TYPE_RELATIVE = 2;
+    public static final int DATE_RANGE_TYPE_SPECIFIC = 3;
+
+    public static final int RELATIVE_DATE_TYPE_PREVIOUS = 1;
+    public static final int RELATIVE_DATE_TYPE_PAST = 2;
+
+    @MethodFilter
     public DwrResponseI18n search(int eventId, int eventSourceType, String status, int alarmLevel, String keywordStr,
-            int page, Date date) {
+            int dateRangeType, int relativeDateType, int previousPeriodCount, int previousPeriodType,
+            int pastPeriodCount, int pastPeriodType, boolean fromNone, int fromYear, int fromMonth, int fromDay,
+            int fromHour, int fromMinute, int fromSecond, boolean toNone, int toYear, int toMonth, int toDay,
+            int toHour, int toMinute, int toSecond, int page, Date date) {
         DwrResponseI18n response = new DwrResponseI18n();
         HttpServletRequest request = WebContextFactory.get().getHttpServletRequest();
         User user = Common.getUser(request);
 
-        String[] keywordArr = keywordStr.split("\\s+");
-        List<String> keywords = new ArrayList<String>();
-        for (String s : keywordArr) {
-            if (!StringUtils.isEmpty(s))
-                keywords.add(s);
-        }
-
-        if (keywords.isEmpty())
-            keywordArr = null;
-        else {
-            keywordArr = new String[keywords.size()];
-            keywords.toArray(keywordArr);
-        }
-
         int from = PAGE_SIZE * page;
         int to = from + PAGE_SIZE;
 
-        // The date is set for the top of the day, which will end up excluding all of the events for that day. So,
-        // we need to add 1 day to it.
+        // This date is for the "jump to date" functionality. The date is set for the top of the day, which will end up 
+        // excluding all of the events for that day. So, // we need to add 1 day to it.
         if (date != null)
             date = DateUtils.minus(new DateTime(date.getTime()), Common.TimePeriods.DAYS, -1).toDate();
 
+        LongPair dateRange = getDateRange(dateRangeType, relativeDateType, previousPeriodCount, previousPeriodType,
+                pastPeriodCount, pastPeriodType, fromNone, fromYear, fromMonth, fromDay, fromHour, fromMinute,
+                fromSecond, toNone, toYear, toMonth, toDay, toHour, toMinute, toSecond);
+
         EventDao eventDao = new EventDao();
-        List<EventInstance> results = eventDao.search(eventId, eventSourceType, status, alarmLevel, keywordArr, user
-                .getId(), getResourceBundle(), from, to, date);
+        List<EventInstance> results = eventDao.search(eventId, eventSourceType, status, alarmLevel,
+                getKeywords(keywordStr), dateRange.getL1(), dateRange.getL2(), user.getId(), getResourceBundle(), from,
+                to, date);
 
         Map<String, Object> model = new HashMap<String, Object>();
         int searchRowCount = eventDao.getSearchRowCount();
@@ -126,5 +131,75 @@ public class EventsDwr extends BaseDwr {
         response.addData("resultCount", new LocalizableMessage("events.search.resultCount", searchRowCount));
 
         return response;
+    }
+
+    @MethodFilter
+    public void exportEvents(int eventId, int eventSourceType, String status, int alarmLevel, String keywordStr,
+            int dateRangeType, int relativeDateType, int previousPeriodCount, int previousPeriodType,
+            int pastPeriodCount, int pastPeriodType, boolean fromNone, int fromYear, int fromMonth, int fromDay,
+            int fromHour, int fromMinute, int fromSecond, boolean toNone, int toYear, int toMonth, int toDay,
+            int toHour, int toMinute, int toSecond) {
+        User user = Common.getUser();
+        LongPair dateRange = getDateRange(dateRangeType, relativeDateType, previousPeriodCount, previousPeriodType,
+                pastPeriodCount, pastPeriodType, fromNone, fromYear, fromMonth, fromDay, fromHour, fromMinute,
+                fromSecond, toNone, toYear, toMonth, toDay, toHour, toMinute, toSecond);
+
+        EventExportDefinition def = new EventExportDefinition(eventId, eventSourceType, status, alarmLevel,
+                getKeywords(keywordStr), dateRange.getL1(), dateRange.getL2(), user.getId());
+
+        Common.getUser().setEventExportDefinition(def);
+    }
+
+    private String[] getKeywords(String keywordStr) {
+        String[] keywordArr = keywordStr.split("\\s+");
+        List<String> keywords = new ArrayList<String>();
+        for (String s : keywordArr) {
+            if (!StringUtils.isEmpty(s))
+                keywords.add(s);
+        }
+
+        if (keywords.isEmpty())
+            keywordArr = null;
+        else {
+            keywordArr = new String[keywords.size()];
+            keywords.toArray(keywordArr);
+        }
+
+        return keywordArr;
+    }
+
+    private LongPair getDateRange(int dateRangeType, int relativeDateType, int previousPeriodCount,
+            int previousPeriodType, int pastPeriodCount, int pastPeriodType, boolean fromNone, int fromYear,
+            int fromMonth, int fromDay, int fromHour, int fromMinute, int fromSecond, boolean toNone, int toYear,
+            int toMonth, int toDay, int toHour, int toMinute, int toSecond) {
+        LongPair range = new LongPair(-1, -1);
+
+        if (dateRangeType == DATE_RANGE_TYPE_RELATIVE) {
+            if (relativeDateType == RELATIVE_DATE_TYPE_PREVIOUS) {
+                DateTime dt = DateUtils.truncateDateTime(new DateTime(), previousPeriodType);
+                range.setL2(dt.getMillis());
+                dt = DateUtils.minus(dt, previousPeriodType, previousPeriodCount);
+                range.setL1(dt.getMillis());
+            }
+            else {
+                DateTime dt = new DateTime();
+                range.setL2(dt.getMillis());
+                dt = DateUtils.minus(dt, pastPeriodType, pastPeriodCount);
+                range.setL1(dt.getMillis());
+            }
+        }
+        else if (dateRangeType == DATE_RANGE_TYPE_SPECIFIC) {
+            if (!fromNone) {
+                DateTime dt = new DateTime(fromYear, fromMonth, fromDay, fromHour, fromMinute, fromSecond, 0);
+                range.setL1(dt.getMillis());
+            }
+
+            if (!toNone) {
+                DateTime dt = new DateTime(toYear, toMonth, toDay, toHour, toMinute, toSecond, 0);
+                range.setL2(dt.getMillis());
+            }
+        }
+
+        return range;
     }
 }

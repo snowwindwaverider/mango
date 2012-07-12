@@ -54,82 +54,98 @@ public class DataPointDetailsController extends ParameterizableViewController {
         int id;
         DataPointDao dataPointDao = new DataPointDao();
         String idStr = request.getParameter("dpid");
+        DataPointVO point = null;
+
         if (StringUtils.isEmpty(idStr)) {
             // Check for pedid (point event detector id)
             String pedStr = request.getParameter("pedid");
-            if (pedStr == null)
-                throw new ShouldNeverHappenException("dpid or pedid must be provided for this view");
+            if (pedStr == null) {
+                // Check if an XID was provided.
+                String xid = request.getParameter("dpxid");
+                if (xid == null)
+                    throw new ShouldNeverHappenException("One of dpid, dpxid, or pedid must be provided for this view");
 
-            int pedid = Integer.parseInt(pedStr);
-            id = dataPointDao.getDataPointIdFromDetectorId(pedid);
+                model.put("currentXid", xid);
+                point = dataPointDao.getDataPoint(xid);
+                id = point == null ? -1 : point.getId();
+            }
+            else {
+                int pedid = Integer.parseInt(pedStr);
+                id = dataPointDao.getDataPointIdFromDetectorId(pedid);
+            }
         }
         else
             id = Integer.parseInt(idStr);
 
         // Put the point in the model.
-        DataPointVO point = dataPointDao.getDataPoint(id);
+        if (point == null)
+            point = dataPointDao.getDataPoint(id);
 
-        Permissions.ensureDataPointReadPermission(user, point);
+        if (point != null) {
+            Permissions.ensureDataPointReadPermission(user, point);
 
-        model.put("point", point);
+            model.put("point", point);
 
-        // Get the views for this user that contain this point.
-        List<View> userViews = new ViewDao().getViews(user.getId());
-        List<View> views = new LinkedList<View>();
-        for (View view : userViews) {
-            view.validateViewComponents(false);
-            if (view.containsValidVisibleDataPoint(id))
-                views.add(view);
-        }
-        model.put("views", views);
-
-        // Get the users that have access to this point.
-        List<User> allUsers = new UserDao().getUsers();
-        List<Map<String, Object>> users = new LinkedList<Map<String, Object>>();
-        Map<String, Object> userData;
-        int accessType;
-        for (User mangoUser : allUsers) {
-            accessType = Permissions.getDataPointAccessType(mangoUser, point);
-            if (accessType != Permissions.DataPointAccessTypes.NONE) {
-                userData = new HashMap<String, Object>();
-                userData.put("user", mangoUser);
-                userData.put("accessType", accessType);
-                users.add(userData);
+            // Get the views for this user that contain this point.
+            List<View> userViews = new ViewDao().getViews(user.getId());
+            List<View> views = new LinkedList<View>();
+            for (View view : userViews) {
+                view.validateViewComponents(false);
+                if (view.containsValidVisibleDataPoint(id))
+                    views.add(view);
             }
-        }
-        model.put("users", users);
+            model.put("views", views);
 
-        // Determine whether the link to edit the point should be displayed
-        model.put("pointEditor", Permissions.hasDataSourcePermission(user, point.getDataSourceId()));
-
-        // Put the events in the model.
-        model.put("events", new EventDao().getEventsForDataPoint(id, user.getId()));
-
-        // Put the default history table count into the model. Default to 10.
-        int historyLimit = 10;
-        if (point.getChartRenderer() instanceof TableChartRenderer)
-            historyLimit = ((TableChartRenderer) point.getChartRenderer()).getLimit();
-        else if (point.getChartRenderer() instanceof ImageFlipbookRenderer)
-            historyLimit = ((ImageFlipbookRenderer) point.getChartRenderer()).getLimit();
-        model.put("historyLimit", historyLimit);
-
-        // Determine our image chart rendering capabilities.
-        if (ImageChartRenderer.getDefinition().supports(point.getPointLocator().getDataTypeId())) {
-            // This point can render an image chart. Carry on...
-            int periodType = Common.TimePeriods.DAYS;
-            int periodCount = 1;
-            if (point.getChartRenderer() instanceof ImageChartRenderer) {
-                ImageChartRenderer r = (ImageChartRenderer) point.getChartRenderer();
-                periodType = r.getTimePeriod();
-                periodCount = r.getNumberOfPeriods();
+            // Get the users that have access to this point.
+            List<User> allUsers = new UserDao().getUsers();
+            List<Map<String, Object>> users = new LinkedList<Map<String, Object>>();
+            Map<String, Object> userData;
+            int accessType;
+            for (User mangoUser : allUsers) {
+                accessType = Permissions.getDataPointAccessType(mangoUser, point);
+                if (accessType != Permissions.DataPointAccessTypes.NONE) {
+                    userData = new HashMap<String, Object>();
+                    userData.put("user", mangoUser);
+                    userData.put("accessType", accessType);
+                    users.add(userData);
+                }
             }
-            model.put("periodType", periodType);
-            model.put("periodCount", periodCount);
-        }
+            model.put("users", users);
 
-        // Determine out flipbook rendering capabilities
-        if (ImageFlipbookRenderer.getDefinition().supports(point.getPointLocator().getDataTypeId()))
-            model.put("flipbookLimit", 10);
+            // Determine whether the link to edit the point should be displayed
+            model.put("pointEditor", Permissions.hasDataSourcePermission(user, point.getDataSourceId()));
+
+            // Put the events in the model.
+            model.put("events", new EventDao().getEventsForDataPoint(id, user.getId()));
+
+            // Put the default history table count into the model. Default to 10.
+            int historyLimit = 10;
+            if (point.getChartRenderer() instanceof TableChartRenderer)
+                historyLimit = ((TableChartRenderer) point.getChartRenderer()).getLimit();
+            else if (point.getChartRenderer() instanceof ImageFlipbookRenderer)
+                historyLimit = ((ImageFlipbookRenderer) point.getChartRenderer()).getLimit();
+            model.put("historyLimit", historyLimit);
+
+            // Determine our image chart rendering capabilities.
+            if (ImageChartRenderer.getDefinition().supports(point.getPointLocator().getDataTypeId())) {
+                // This point can render an image chart. Carry on...
+                int periodType = Common.TimePeriods.DAYS;
+                int periodCount = 1;
+                if (point.getChartRenderer() instanceof ImageChartRenderer) {
+                    ImageChartRenderer r = (ImageChartRenderer) point.getChartRenderer();
+                    periodType = r.getTimePeriod();
+                    periodCount = r.getNumberOfPeriods();
+                }
+                model.put("periodType", periodType);
+                model.put("periodCount", periodCount);
+            }
+
+            // Determine out flipbook rendering capabilities
+            if (ImageFlipbookRenderer.getDefinition().supports(point.getPointLocator().getDataTypeId()))
+                model.put("flipbookLimit", 10);
+
+            model.put("currentXid", point.getXid());
+        }
 
         // Set the point in the session for the dwr.
         user.setEditPoint(point);

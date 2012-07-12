@@ -45,7 +45,6 @@ public class DataPurge {
     private final Log log = LogFactory.getLog(DataPurge.class);
     private long runtime;
 
-    private final SystemSettingsDao systemSettingsDao = new SystemSettingsDao();
     private final RuntimeManager rm = Common.ctx.getRuntimeManager();
 
     public static void schedule() {
@@ -67,7 +66,7 @@ public class DataPurge {
 
         // Get the data point information.
         DataPointDao dataPointDao = new DataPointDao();
-        List<DataPointVO> dataPoints = dataPointDao.getDataPoints(null);
+        List<DataPointVO> dataPoints = dataPointDao.getDataPoints(null, false);
         int deleteCount = 0;
         for (DataPointVO dataPoint : dataPoints)
             deleteCount += purgePoint(dataPoint);
@@ -126,8 +125,8 @@ public class DataPurge {
 
     private void eventPurge() {
         DateTime cutoff = DateUtils.truncateDateTime(new DateTime(runtime), Common.TimePeriods.DAYS);
-        cutoff = DateUtils.minus(cutoff, systemSettingsDao.getIntValue(SystemSettingsDao.EVENT_PURGE_PERIOD_TYPE),
-                systemSettingsDao.getIntValue(SystemSettingsDao.EVENT_PURGE_PERIODS));
+        cutoff = DateUtils.minus(cutoff, SystemSettingsDao.getIntValue(SystemSettingsDao.EVENT_PURGE_PERIOD_TYPE),
+                SystemSettingsDao.getIntValue(SystemSettingsDao.EVENT_PURGE_PERIODS));
 
         int deleteCount = new EventDao().purgeEventsBefore(cutoff.getMillis());
         if (deleteCount > 0)
@@ -136,8 +135,8 @@ public class DataPurge {
 
     private void reportPurge() {
         DateTime cutoff = DateUtils.truncateDateTime(new DateTime(runtime), Common.TimePeriods.DAYS);
-        cutoff = DateUtils.minus(cutoff, systemSettingsDao.getIntValue(SystemSettingsDao.REPORT_PURGE_PERIOD_TYPE),
-                systemSettingsDao.getIntValue(SystemSettingsDao.REPORT_PURGE_PERIODS));
+        cutoff = DateUtils.minus(cutoff, SystemSettingsDao.getIntValue(SystemSettingsDao.REPORT_PURGE_PERIOD_TYPE),
+                SystemSettingsDao.getIntValue(SystemSettingsDao.REPORT_PURGE_PERIODS));
 
         int deleteCount = new ReportDao().purgeReportsBefore(cutoff.getMillis());
         if (deleteCount > 0)

@@ -106,13 +106,13 @@ public class StateChangeCountDetectorRT extends TimeoutDetectorRT {
                     eventActiveTime = value.getTime();
 
                     // Raise the event.
-                    raiseEvent(eventActiveTime);
+                    raiseEvent(eventActiveTime, createEventContext());
                 }
                 else
-                    // We have already scheduled an timeout, so remove it
+                    // We have already scheduled a timeout, so remove it
                     unscheduleJob();
 
-                // Schedule a job for the deactivating of this detector.
+                // Schedule a job for the deactivation of this detector.
                 long eventInactiveTime = pointValues.get(pointValues.size() - vo.getChangeCount()).getTime()
                         + getDurationMS();
                 scheduleJob(eventInactiveTime + 1);
@@ -120,7 +120,8 @@ public class StateChangeCountDetectorRT extends TimeoutDetectorRT {
         }
     }
 
-    public void scheduleTimeout(long fireTime) {
+    @Override
+    public void scheduleTimeoutImpl(long fireTime) {
         synchronized (pointValues) {
             // This call was scheduled to occur at the eventInactiveTime.
             // Strictly speaking, the fact this method was called implies that the detector is going from active to

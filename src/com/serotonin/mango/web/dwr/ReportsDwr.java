@@ -27,8 +27,11 @@ import com.serotonin.mango.db.dao.DataPointDao;
 import com.serotonin.mango.db.dao.MailingListDao;
 import com.serotonin.mango.db.dao.ReportDao;
 import com.serotonin.mango.db.dao.UserDao;
+import com.serotonin.mango.db.dao.WatchListDao;
 import com.serotonin.mango.rt.maint.work.ReportWorkItem;
+import com.serotonin.mango.vo.DataPointVO;
 import com.serotonin.mango.vo.User;
+import com.serotonin.mango.vo.WatchList;
 import com.serotonin.mango.vo.permission.Permissions;
 import com.serotonin.mango.vo.report.ReportInstance;
 import com.serotonin.mango.vo.report.ReportJob;
@@ -83,7 +86,8 @@ public class ReportsDwr extends BaseDwr {
             int previousPeriodType, int pastPeriodCount, int pastPeriodType, boolean fromNone, int fromYear,
             int fromMonth, int fromDay, int fromHour, int fromMinute, boolean toNone, int toYear, int toMonth,
             int toDay, int toHour, int toMinute, boolean schedule, int schedulePeriod, int runDelayMinutes,
-            String scheduleCron, boolean email, boolean includeData, List<RecipientListEntryBean> recipients) {
+            String scheduleCron, boolean email, boolean includeData, boolean zipData,
+            List<RecipientListEntryBean> recipients) {
 
         DwrResponseI18n response = new DwrResponseI18n();
 
@@ -155,6 +159,7 @@ public class ReportsDwr extends BaseDwr {
         report.setScheduleCron(scheduleCron);
         report.setEmail(email);
         report.setIncludeData(includeData);
+        report.setZipData(zipData);
         report.setRecipients(recipients);
 
         // Save the report
@@ -172,7 +177,7 @@ public class ReportsDwr extends BaseDwr {
             boolean includeUserComments, int dateRangeType, int relativeDateType, int previousPeriodCount,
             int previousPeriodType, int pastPeriodCount, int pastPeriodType, boolean fromNone, int fromYear,
             int fromMonth, int fromDay, int fromHour, int fromMinute, boolean toNone, int toYear, int toMonth,
-            int toDay, int toHour, int toMinute, boolean email, boolean includeData,
+            int toDay, int toHour, int toMinute, boolean email, boolean includeData, boolean zipData,
             List<RecipientListEntryBean> recipients) {
         DwrResponseI18n response = new DwrResponseI18n();
 
@@ -206,6 +211,7 @@ public class ReportsDwr extends BaseDwr {
             report.setToMinute(toMinute);
             report.setEmail(email);
             report.setIncludeData(includeData);
+            report.setZipData(zipData);
             report.setRecipients(recipients);
 
             ReportWorkItem.queueReport(report);
@@ -279,5 +285,23 @@ public class ReportsDwr extends BaseDwr {
 
     public void setPreventPurge(int instanceId, boolean value) {
         new ReportDao().setReportInstancePreventPurge(instanceId, value, Common.getUser().getId());
+    }
+
+    public ReportVO createReportFromWatchlist(int watchListId) {
+        WatchList watchList = new WatchListDao().getWatchList(watchListId);
+        if (watchList == null)
+            return null;
+
+        ReportVO report = new ReportVO();
+        report.setName(LocalizableMessage.getMessage(getResourceBundle(), "common.copyPrefix", watchList.getName()));
+        for (DataPointVO dp : watchList.getPointList()) {
+            ReportPointVO rp = new ReportPointVO();
+            rp.setPointId(dp.getId());
+            rp.setColour(dp.getChartColour());
+            rp.setConsolidatedChart(true);
+            report.getPoints().add(rp);
+        }
+
+        return report;
     }
 }

@@ -34,6 +34,7 @@ import org.apache.commons.logging.LogFactory;
 
 import com.serotonin.mango.Common;
 import com.serotonin.mango.vo.User;
+import com.serotonin.mango.web.integration.CrowdUtils;
 
 abstract public class LoggedInFilter implements Filter {
     private final Log LOGGER = LogFactory.getLog(LoggedInFilter.class);
@@ -50,8 +51,19 @@ abstract public class LoggedInFilter implements Filter {
         HttpServletRequest request = (HttpServletRequest) servletRequest;
         HttpServletResponse response = (HttpServletResponse) servletResponse;
 
+        boolean loggedIn = true;
+
         User user = Common.getUser(request);
-        if (!checkAccess(user)) {
+        if (!checkAccess(user))
+            loggedIn = false;
+
+        if (loggedIn && CrowdUtils.isCrowdEnabled()) {
+            if (CrowdUtils.isCrowdAuthenticated(user))
+                // The user may not have been authenticated by Crowd, so only check with Crowd if it was.
+                loggedIn = CrowdUtils.isAuthenticated(request, response);
+        }
+
+        if (!loggedIn) {
             LOGGER.info("Denying access to secure page for session id " + request.getSession().getId() + ", uri="
                     + request.getRequestURI());
             response.sendRedirect(request.getContextPath() + forwardUrl);

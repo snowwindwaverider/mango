@@ -125,12 +125,30 @@
           points[points.length] = {dataPointId: selectedPoints[i].id};
       
       PublisherEditDwr.savePersistentSender(name, xid, enabled, points, $get("host"), $get("port"),
-              $get("authorizationKey"), $get("syncType"), cacheWarningSize, changesOnly, sendSnapshot, 
-              snapshotSendPeriods, snapshotSendPeriodType, savePublisherCB);
+              $get("authorizationKey"), $get("xidPrefix"), $get("syncType"), cacheWarningSize, changesOnly,
+              sendSnapshot, snapshotSendPeriods, snapshotSendPeriodType, savePublisherCB);
+  }
+  
+  function getRtStatus() {
+      setDisabled("getStatusBtn", true);
+      PublisherEditDwr.getPersistentSenderStatus(function(response) {
+          dwr.util.removeAllOptions("statusResults");
+    	  dwr.util.addOptions("statusResults", response.messages, "genericMessage");
+          setDisabled("getStatusBtn", false);
+      });
+  }
+  
+  function startSync() {
+      setDisabled("startSyncBtn", true);
+      PublisherEditDwr.startPersistentSync(function(response) {
+          dwr.util.removeAllOptions("statusResults");
+          dwr.util.addOptions("statusResults", response.messages, "genericMessage");
+          setDisabled("startSyncBtn", false);
+      });
   }
 </script>
 
-<table cellpadding="0" cellspacing="0">
+<table cellpadding="0" cellspacing="0" style="float:left;">
   <tr>
     <td valign="top">
       <div class="borderDiv marR marB">
@@ -148,7 +166,6 @@
           </tr>
           
           <tr>
-          
             <td class="formLabelRequired"><fmt:message key="publisherEdit.persistent.port"/></td>
             <td class="formField">
               <input type="text" id="port" value="${publisher.port}"/>
@@ -162,6 +179,11 @@
           </tr>
           
           <tr>
+            <td class="formLabelRequired"><fmt:message key="publisherEdit.persistent.xidPrefix"/></td>
+            <td class="formField"><input type="text" id="xidPrefix" value="${publisher.xidPrefix}"/></td>
+          </tr>
+          
+          <tr>
             <td class="formLabelRequired"><fmt:message key="publisherEdit.persistent.sync"/></td>
             <td class="formField">
               <sst:select id="syncType" value="${publisher.syncType}">
@@ -172,6 +194,27 @@
               </sst:select>
             </td>
           </tr>
+        </table>
+      </div>
+    </td>
+  </tr>
+</table>
+
+<table cellpadding="0" cellspacing="0">
+  <tr>
+    <td valign="top">
+      <div class="borderDiv marR marB">
+        <table>
+          <tr><td class="smallTitle"><fmt:message key="publisherEdit.persistent.status"/></td></tr>
+          <tr>
+            <td style="white-space: nowrap;">
+              <input id="getStatusBtn" type="button" onclick="getRtStatus()" 
+                      value="<fmt:message key="publisherEdit.persistent.getStatus"/>"/>
+              <input id="startSyncBtn" type="button" onclick="startSync()" 
+                      value="<fmt:message key="publisherEdit.persistent.startSync"/>"/>
+            </td>
+          </tr>
+          <tr><td><ul id="statusResults" style="padding-left: 20px;"></ul></td></tr>
         </table>
       </div>
     </td>

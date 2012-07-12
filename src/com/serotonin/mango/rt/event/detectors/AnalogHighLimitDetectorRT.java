@@ -80,9 +80,9 @@ public class AnalogHighLimitDetectorRT extends TimeDelayedEventDetectorRT {
 
         if (highLimitActive)
             // Schedule a job that will call the event active if it runs.
-            scheduleJob(highLimitActiveTime);
+            scheduleJob();
         else
-            unscheduleJob();
+            unscheduleJob(highLimitInactiveTime);
     }
 
     @Override
@@ -102,6 +102,11 @@ public class AnalogHighLimitDetectorRT extends TimeDelayedEventDetectorRT {
         }
     }
 
+    @Override
+    protected long getConditionActiveTime() {
+        return highLimitActiveTime;
+    }
+
     /**
      * This method is only called when the event changes between being active or not, i.e. if the event currently is
      * active, then it should never be called with a value of true. That said, provision is made to ensure that the high
@@ -117,7 +122,7 @@ public class AnalogHighLimitDetectorRT extends TimeDelayedEventDetectorRT {
             if (highLimitActive)
                 // Ok, things are good. Carry on...
                 // Raise the event.
-                raiseEvent(highLimitActiveTime + getDurationMS());
+                raiseEvent(highLimitActiveTime + getDurationMS(), createEventContext());
             else
                 eventActive = false;
         }

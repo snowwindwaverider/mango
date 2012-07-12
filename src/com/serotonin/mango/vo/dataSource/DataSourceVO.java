@@ -53,6 +53,8 @@ import com.serotonin.mango.vo.dataSource.galil.GalilDataSourceVO;
 import com.serotonin.mango.vo.dataSource.http.HttpImageDataSourceVO;
 import com.serotonin.mango.vo.dataSource.http.HttpReceiverDataSourceVO;
 import com.serotonin.mango.vo.dataSource.http.HttpRetrieverDataSourceVO;
+import com.serotonin.mango.vo.dataSource.internal.InternalDataSourceVO;
+import com.serotonin.mango.vo.dataSource.jmx.JmxDataSourceVO;
 import com.serotonin.mango.vo.dataSource.mbus.MBusDataSourceVO;
 import com.serotonin.mango.vo.dataSource.meta.MetaDataSourceVO;
 import com.serotonin.mango.vo.dataSource.modbus.ModbusIpDataSourceVO;
@@ -129,6 +131,18 @@ abstract public class DataSourceVO<T extends DataSourceVO<?>> implements Seriali
             @Override
             public DataSourceVO<?> createDataSourceVO() {
                 return new HttpImageDataSourceVO();
+            }
+        },
+        INTERNAL(27, "dsEdit.internal", true) {
+            @Override
+            public DataSourceVO<?> createDataSourceVO() {
+                return new InternalDataSourceVO();
+            }
+        },
+        JMX(26, "dsEdit.jmx", true) {
+            @Override
+            public DataSourceVO<?> createDataSourceVO() {
+                return new JmxDataSourceVO();
             }
         },
         M_BUS(20, "dsEdit.mbus", false) {

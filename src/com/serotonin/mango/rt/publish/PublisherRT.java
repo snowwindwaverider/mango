@@ -19,10 +19,13 @@
 package com.serotonin.mango.rt.publish;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.serotonin.ShouldNeverHappenException;
 import com.serotonin.mango.Common;
+import com.serotonin.mango.db.dao.PublisherDao;
 import com.serotonin.mango.rt.RuntimeManager;
 import com.serotonin.mango.rt.dataImage.DataPointRT;
 import com.serotonin.mango.rt.dataImage.PointValueTime;
@@ -43,6 +46,8 @@ import com.serotonin.web.i18n.LocalizableMessage;
 abstract public class PublisherRT<T extends PublishedPointVO> implements TimeoutClient {
     public static final int POINT_DISABLED_EVENT = 1;
     public static final int QUEUE_SIZE_WARNING_EVENT = 2;
+
+    private final Object persistentDataLock = new Object();
 
     private final EventType pointDisabledEventType;
     private final EventType queueSizeWarningEventType;
@@ -73,6 +78,38 @@ abstract public class PublisherRT<T extends PublishedPointVO> implements Timeout
 
     public PublisherVO<T> getVo() {
         return vo;
+    }
+
+    /**
+     * This method is usable by subclasses to retrieve serializable data stored using the setPersistentData method.
+     */
+    public Object getPersistentData(String key) {
+        synchronized (persistentDataLock) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> map = (Map<String, Object>) new PublisherDao().getPersistentData(vo.getId());
+            if (map != null)
+                return map.get(key);
+            return null;
+        }
+    }
+
+    /**
+     * This method is usable by subclasses to store any type of serializable data. This intention is to provide a
+     * mechanism for publisher RTs to be able to persist data between runs. Normally this method would at least be
+     * called in the terminate method, but may also be called regularly for failover purposes.
+     */
+    public void setPersistentData(String key, Object persistentData) {
+        PublisherDao dao = new PublisherDao();
+        synchronized (persistentDataLock) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> map = (Map<String, Object>) dao.getPersistentData(vo.getId());
+            if (map == null)
+                map = new HashMap<String, Object>();
+
+            map.put(key, persistentData);
+
+            dao.savePersistentData(vo.getId(), map);
+        }
     }
 
     void publish(T vo, PointValueTime newValue) {
@@ -113,7 +150,7 @@ abstract public class PublisherRT<T extends PublishedPointVO> implements Timeout
             if (pointDisabledEventActive)
                 // A published point has been terminated, was never enabled, or no longer exists.
                 Common.ctx.getEventManager().raiseEvent(pointDisabledEventType, System.currentTimeMillis(), true,
-                        AlarmLevels.URGENT, new LocalizableMessage("event.publish.pointMissing"));
+                        AlarmLevels.URGENT, new LocalizableMessage("event.publish.pointMissing"), createEventContext());
             else
                 // Everything is good
                 Common.ctx.getEventManager().returnToNormal(pointDisabledEventType, System.currentTimeMillis());
@@ -122,11 +159,18 @@ abstract public class PublisherRT<T extends PublishedPointVO> implements Timeout
 
     void fireQueueSizeWarningEvent() {
         Common.ctx.getEventManager().raiseEvent(queueSizeWarningEventType, System.currentTimeMillis(), true,
-                AlarmLevels.URGENT, new LocalizableMessage("event.publish.queueSize", vo.getCacheWarningSize()));
+                AlarmLevels.URGENT, new LocalizableMessage("event.publish.queueSize", vo.getCacheWarningSize()),
+                createEventContext());
     }
 
     void deactivateQueueSizeWarningEvent() {
         Common.ctx.getEventManager().returnToNormal(queueSizeWarningEventType, System.currentTimeMillis());
+    }
+
+    protected Map<String, Object> createEventContext() {
+        Map<String, Object> context = new HashMap<String, Object>();
+        context.put("publisher", vo);
+        return context;
     }
 
     //

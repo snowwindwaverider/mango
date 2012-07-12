@@ -18,6 +18,9 @@
  */
 package com.serotonin.mango.rt.event.detectors;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import com.serotonin.mango.Common;
 import com.serotonin.mango.rt.dataImage.DataPointListener;
 import com.serotonin.mango.rt.dataImage.PointValueTime;
@@ -38,20 +41,28 @@ abstract public class PointEventDetectorRT extends SimpleEventDetector implement
         return et;
     }
 
-    protected void raiseEvent(long time) {
+    protected void raiseEvent(long time, Map<String, Object> context) {
         LocalizableMessage msg;
         if (!StringUtils.isEmpty(vo.getAlias()))
             msg = new LocalizableMessage("common.default", vo.getAlias());
         else
             msg = getMessage();
 
-        Common.ctx.getEventManager().raiseEvent(getEventType(), time, vo.isRtnApplicable(), vo.getAlarmLevel(), msg);
+        Common.ctx.getEventManager().raiseEvent(getEventType(), time, vo.isRtnApplicable(), vo.getAlarmLevel(), msg,
+                context);
         fireEventDetectorStateChanged(time);
     }
 
     protected void returnToNormal(long time) {
         Common.ctx.getEventManager().returnToNormal(getEventType(), time);
         fireEventDetectorStateChanged(time);
+    }
+
+    protected Map<String, Object> createEventContext() {
+        Map<String, Object> context = new HashMap<String, Object>();
+        context.put("pointEventDetector", vo);
+        context.put("point", vo.njbGetDataPoint());
+        return context;
     }
 
     abstract protected LocalizableMessage getMessage();
@@ -62,10 +73,7 @@ abstract public class PointEventDetectorRT extends SimpleEventDetector implement
 
     //
     //
-    // /
-    // / Lifecycle interface
-    // /
-    //
+    // Lifecycle interface
     //
     public void initialize() {
         // no op
@@ -82,10 +90,7 @@ abstract public class PointEventDetectorRT extends SimpleEventDetector implement
 
     //
     //
-    // /
-    // / Point listener interface
-    // /
-    //
+    // Point listener interface
     //
     public void pointChanged(PointValueTime oldValue, PointValueTime newValue) {
         // no op

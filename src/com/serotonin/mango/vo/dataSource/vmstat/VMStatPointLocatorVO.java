@@ -28,7 +28,6 @@ import com.serotonin.json.JsonException;
 import com.serotonin.json.JsonObject;
 import com.serotonin.json.JsonReader;
 import com.serotonin.json.JsonRemoteEntity;
-import com.serotonin.json.JsonRemoteProperty;
 import com.serotonin.json.JsonSerializable;
 import com.serotonin.mango.DataTypes;
 import com.serotonin.mango.rt.dataSource.PointLocatorRT;
@@ -86,7 +85,6 @@ public class VMStatPointLocatorVO extends AbstractPointLocatorVO implements Json
         ATTRIBUTE_CODES.addElement(Attributes.CPU_ST, "CPU_ST", "dsEdit.vmstat.attr.cpuSt");
     };
 
-    @JsonRemoteProperty
     private int attributeId = Attributes.CPU_ID;
 
     public boolean isSettable() {
@@ -133,9 +131,8 @@ public class VMStatPointLocatorVO extends AbstractPointLocatorVO implements Json
     }
 
     //
-    // /
-    // / Serialization
-    // /
+    //
+    // Serialization
     //
     private static final long serialVersionUID = -1;
     private static final int version = 1;
@@ -160,8 +157,8 @@ public class VMStatPointLocatorVO extends AbstractPointLocatorVO implements Json
             throw new LocalizableJsonException("emport.error.missing", "attributeId", ATTRIBUTE_CODES.getCodeList());
         attributeId = ATTRIBUTE_CODES.getId(text);
         if (!ATTRIBUTE_CODES.isValidId(attributeId))
-            throw new LocalizableJsonException("emport.error.invalid", "attributeId", text, ATTRIBUTE_CODES
-                    .getCodeList());
+            throw new LocalizableJsonException("emport.error.invalid", "attributeId", text,
+                    ATTRIBUTE_CODES.getCodeList());
     }
 
     @Override

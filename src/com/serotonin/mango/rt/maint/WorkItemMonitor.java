@@ -1,16 +1,14 @@
 package com.serotonin.mango.rt.maint;
 
+import java.util.Collection;
 import java.util.concurrent.ThreadPoolExecutor;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import com.serotonin.mango.Common;
+import com.serotonin.monitor.IntegerMonitor;
 import com.serotonin.timer.FixedRateTrigger;
 import com.serotonin.timer.TimerTask;
 
 public class WorkItemMonitor extends TimerTask {
-    private static final Log log = LogFactory.getLog(WorkItemMonitor.class);
     private static final long TIMEOUT = 1000 * 10; // Run every ten seconds.
 
     /**
@@ -21,28 +19,42 @@ public class WorkItemMonitor extends TimerTask {
         Common.timer.schedule(new WorkItemMonitor());
     }
 
+    private final IntegerMonitor mediumPriorityServiceQueueSize = new IntegerMonitor(
+            "WorkItemMonitor.mediumPriorityServiceQueueSize", null);
+    private final IntegerMonitor scheduledTimerTaskCount = new IntegerMonitor(
+            "WorkItemMonitor.scheduledTimerTaskCount", null);
+    private final IntegerMonitor highPriorityServiceQueueSize = new IntegerMonitor(
+            "WorkItemMonitor.highPriorityServiceQueueSize", null);
+    private final IntegerMonitor maxStackHeight = new IntegerMonitor("WorkItemMonitor.maxStackHeight", null);
+    private final IntegerMonitor threadCount = new IntegerMonitor("WorkItemMonitor.threadCount", null);
+
     private WorkItemMonitor() {
         super(new FixedRateTrigger(TIMEOUT, TIMEOUT));
+
+        Common.MONITORED_VALUES.addIfMissingStatMonitor(mediumPriorityServiceQueueSize);
+        Common.MONITORED_VALUES.addIfMissingStatMonitor(scheduledTimerTaskCount);
+        Common.MONITORED_VALUES.addIfMissingStatMonitor(highPriorityServiceQueueSize);
+        Common.MONITORED_VALUES.addIfMissingStatMonitor(maxStackHeight);
+        Common.MONITORED_VALUES.addIfMissingStatMonitor(threadCount);
     }
 
     @Override
     public void run(long fireTime) {
-        check();
-    }
-
-    public static void check() {
         BackgroundProcessing bp = Common.ctx.getBackgroundProcessing();
 
-        int med = bp.getMediumPriorityServiceQueueSize();
-        if (med > 0)
-            log.info("Medium priority service queue has " + med + " queued tasks");
+        mediumPriorityServiceQueueSize.setValue(bp.getMediumPriorityServiceQueueSize());
+        scheduledTimerTaskCount.setValue(Common.timer.size());
+        highPriorityServiceQueueSize
+                .setValue(((ThreadPoolExecutor) Common.timer.getExecutorService()).getActiveCount());
 
-        int scheduled = Common.timer.size();
-        if (scheduled > 0)
-            log.debug("Scheduled timer tasks: " + scheduled);
-
-        int high = ((ThreadPoolExecutor) Common.timer.getExecutorService()).getActiveCount();
-        if (high > 3)
-            log.warn("High priority active count: " + high);
+        // Check the stack heights
+        int max = 0;
+        Collection<StackTraceElement[]> stacks = Thread.getAllStackTraces().values();
+        threadCount.setValue(stacks.size());
+        for (StackTraceElement[] stack : stacks) {
+            if (max < stack.length)
+                max = stack.length;
+        }
+        maxStackHeight.setValue(max);
     }
 }

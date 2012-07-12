@@ -54,6 +54,14 @@
       </tr>
     </spring:bind>
     
+    <spring:bind path="form.deviceName">
+      <tr>
+        <td class="formLabelRequired"><fmt:message key="pointEdit.props.deviceName"/></td>
+        <td class="formField"><input type="text" name="deviceName" value="${status.value}"/></td>
+        <td class="formError">${status.errorMessage}</td>
+      </tr>
+    </spring:bind>
+    
     <tbody id="engineeringUnitsSection" style="display:none;">
       <spring:bind path="form.engineeringUnits">
         <tr>
@@ -65,6 +73,14 @@
         </tr>
       </spring:bind>
     </tbody>
+    
+    <spring:bind path="form.chartColour">
+      <tr>
+        <td class="formLabelRequired"><fmt:message key="pointEdit.props.chartColour"/></td>
+        <td class="formField"><input type="text" name="chartColour" value="${status.value}"/></td>
+        <td class="formError">${status.errorMessage}</td>
+      </tr>
+    </spring:bind>
     
   </table>
 </div>

@@ -86,9 +86,9 @@ public class AnalogLowLimitDetectorRT extends TimeDelayedEventDetectorRT {
 
         if (lowLimitActive)
             // Schedule a job that will call the event active if it runs.
-            scheduleJob(lowLimitActiveTime);
+            scheduleJob();
         else
-            unscheduleJob();
+            unscheduleJob(lowLimitInactiveTime);
     }
 
     @Override
@@ -108,6 +108,11 @@ public class AnalogLowLimitDetectorRT extends TimeDelayedEventDetectorRT {
         }
     }
 
+    @Override
+    protected long getConditionActiveTime() {
+        return lowLimitActiveTime;
+    }
+
     /**
      * This method is only called when the event changes between being active or not, i.e. if the event currently is
      * active, then it should never be called with a value of true. That said, provision is made to ensure that the low
@@ -123,7 +128,7 @@ public class AnalogLowLimitDetectorRT extends TimeDelayedEventDetectorRT {
             if (lowLimitActive)
                 // Ok, things are good. Carry on...
                 // Raise the event.
-                raiseEvent(lowLimitActiveTime + getDurationMS());
+                raiseEvent(lowLimitActiveTime + getDurationMS(), createEventContext());
             else {
                 // Perhaps the job wasn't successfully unscheduled. Write a log entry and ignore.
                 log.warn("Call to set event active when low limit is not active. Ignoring.");

@@ -225,8 +225,8 @@ public class ViewDwr extends BaseDwr {
             model.put("invalid", "true");
         else {
             // Add the rendered text as a convenience to the snippets.
-            model.put("text", pointComponent.tgetDataPoint().getTextRenderer().getText(pointValue,
-                    TextRenderer.HINT_FULL));
+            model.put("text",
+                    pointComponent.tgetDataPoint().getTextRenderer().getText(pointValue, TextRenderer.HINT_FULL));
 
             state.setContent(generateContent(request, pointComponent.snippetName() + ".jsp", model));
             pointComponent.tgetDataPoint().updateLastValue(pointValue);
@@ -306,7 +306,7 @@ public class ViewDwr extends BaseDwr {
         result.put("componentTypes", components);
 
         // Available points
-        List<DataPointVO> allPoints = new DataPointDao().getDataPoints(DataPointExtendedNameComparator.instance);
+        List<DataPointVO> allPoints = new DataPointDao().getDataPoints(DataPointExtendedNameComparator.instance, false);
         List<DataPointBean> availablePoints = new ArrayList<DataPointBean>();
         for (DataPointVO dataPoint : allPoints) {
             if (Permissions.hasDataPointReadPermission(user, dataPoint))
@@ -446,8 +446,7 @@ public class ViewDwr extends BaseDwr {
                 response.addContextualMessage("graphicRendererBinaryImageSetZeroMsg",
                         "viewEdit.graphic.missingZeroImage");
             if (oneImage == -1)
-                response
-                        .addContextualMessage("graphicRendererBinaryImageSetOneMsg", "viewEdit.graphic.missingOneImage");
+                response.addContextualMessage("graphicRendererBinaryImageSetOneMsg", "viewEdit.graphic.missingOneImage");
         }
 
         if (!response.getHasMessages()) {
@@ -527,7 +526,8 @@ public class ViewDwr extends BaseDwr {
     }
 
     @MethodFilter
-    public DwrResponseI18n saveSimplePointComponent(String viewComponentId, boolean displayPointName, String styleAttribute) {
+    public DwrResponseI18n saveSimplePointComponent(String viewComponentId, boolean displayPointName,
+            String styleAttribute) {
         SimplePointComponent c = (SimplePointComponent) getViewComponent(viewComponentId);
         c.setDisplayPointName(displayPointName);
         c.setStyleAttribute(styleAttribute);
