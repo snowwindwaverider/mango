@@ -24,6 +24,9 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallbackWithoutResult;
@@ -31,6 +34,7 @@ import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 import com.serotonin.db.spring.GenericRowMapper;
 import com.serotonin.mango.Common;
 import com.serotonin.mango.rt.dataImage.SetPointSource;
+import com.serotonin.mango.rt.dataSource.modbus.ModbusDataSource;
 import com.serotonin.mango.rt.event.EventInstance;
 import com.serotonin.mango.vo.User;
 import com.serotonin.mango.vo.UserComment;
@@ -38,6 +42,8 @@ import com.serotonin.mango.vo.permission.DataPointAccess;
 import com.serotonin.web.taglib.Functions;
 
 public class UserDao extends BaseDao {
+	private final Log LOG = LogFactory.getLog(ModbusDataSource.class); 
+	
     private static final String USER_SELECT = "select id, username, password, email, phone, admin, disabled, selectedWatchList, homeUrl, lastLogin, "
             + "  receiveAlarmEmails, receiveOwnAuditEvents " + "from users ";
 
@@ -145,12 +151,27 @@ public class UserDao extends BaseDao {
             + "  receiveOwnAuditEvents=? " + "where id=?";
 
     void updateUser(User user) {
-        ejt.update(
-                USER_UPDATE,
-                new Object[] { user.getUsername(), user.getPassword(), user.getEmail(), user.getPhone(),
-                        boolToChar(user.isAdmin()), boolToChar(user.isDisabled()), user.getHomeUrl(),
-                        user.getReceiveAlarmEmails(), boolToChar(user.isReceiveOwnAuditEvents()), user.getId() });
-        saveRelationalData(user);
+    	// potential fix or "An attempt was made to get a data value of type 'VARCHAR' from a data value of type 'null'"  
+    	if (user.getPhone() == null)
+    		user.setPhone("");
+    	if (user.getHomeUrl() == null) 
+    		user.setHomeUrl("");
+    	
+    	try {
+	        ejt.update(
+	                USER_UPDATE,
+	                new Object[] { user.getUsername(), user.getPassword(), user.getEmail(), user.getPhone(),
+	                        boolToChar(user.isAdmin()), boolToChar(user.isDisabled()), user.getHomeUrl(),
+	                        user.getReceiveAlarmEmails(), boolToChar(user.isReceiveOwnAuditEvents()), user.getId() }, 
+	                        new int[] { Types.VARCHAR, Types.VARCHAR, Types.VARCHAR, Types.VARCHAR, Types.VARCHAR,
+	                		Types.VARCHAR, Types.VARCHAR, Types.INTEGER, Types.VARCHAR, Types.INTEGER });
+	                
+	        saveRelationalData(user);
+    	}
+    	catch (DataAccessException e) {
+    		LOG.error("Error updating user: " + user, e);
+    		throw e;
+    	}
     }
 
     private void saveRelationalData(final User user) {
