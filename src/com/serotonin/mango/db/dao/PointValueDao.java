@@ -370,7 +370,8 @@ public class PointValueDao extends BaseDao {
             value = new AlphanumericValue(s);
             break;
         case (DataTypes.IMAGE):
-            value = new ImageValue(Integer.parseInt(rs.getString(firstParameter + 2)), rs.getInt(firstParameter + 3));
+        	// changed second parameter on imagevalue constructor from column 4 to 2. seems like a bug, was preventing image type from being assigned correctly.
+            value = new ImageValue(Integer.parseInt(rs.getString(firstParameter + 2)), rs.getInt(firstParameter + 1));
             break;
         default:
             value = null;
