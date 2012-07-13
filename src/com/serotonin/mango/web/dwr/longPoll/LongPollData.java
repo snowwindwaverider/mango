@@ -19,6 +19,8 @@
 package com.serotonin.mango.web.dwr.longPoll;
 
 import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Set;
 
 import javax.servlet.http.HttpSessionBindingEvent;
 import javax.servlet.http.HttpSessionBindingListener;
@@ -33,8 +35,8 @@ public class LongPollData implements HttpSessionBindingListener, Serializable {
 
     private final int pollSessionId;
     private long timestamp;
-    private LongPollRequest request;
-    private LongPollState state;
+    private HashMap<Integer,LongPollRequest> requests = new HashMap<Integer,LongPollRequest>();
+    private HashMap<Integer,LongPollState> states = new HashMap<Integer,LongPollState>();
 
     public LongPollData(int pollSessionId) {
         this.pollSessionId = pollSessionId;
@@ -47,7 +49,7 @@ public class LongPollData implements HttpSessionBindingListener, Serializable {
     }
 
     public LongPollRequest getRequest() {
-        return request;
+        return (LongPollRequest)requests.get(pollSessionId);
     }
 
     public void updateTimestamp() {
@@ -63,16 +65,21 @@ public class LongPollData implements HttpSessionBindingListener, Serializable {
             request = new LongPollRequest();
             request.setTerminated(true);
         }
-        this.request = request;
+        requests.put(pollSessionId, request);
     }
 
     public LongPollState getState() {
-        return state;
+        return states.get(pollSessionId);
     }
 
     public void setState(LongPollState state) {
-        this.state = state;
+        states.put(pollSessionId, state);
     }
+    
+    public Set<Integer> getRequestsKeySet() {
+    	return requests.keySet();
+    }
+    
 
     //
     // /

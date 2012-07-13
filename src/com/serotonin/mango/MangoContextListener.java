@@ -228,6 +228,8 @@ public class MangoContextListener implements ServletContextListener {
 
         ctx.setAttribute("constants.UserComment.TYPE_EVENT", UserComment.TYPE_EVENT);
         ctx.setAttribute("constants.UserComment.TYPE_POINT", UserComment.TYPE_POINT);
+        ctx.setAttribute("constants.UserComment.TYPE_CHAT", UserComment.TYPE_CHAT);
+        ctx.setAttribute("constants.UserComment.TYPE_POINT_VALUE", UserComment.TYPE_POINT_VALUE);
 
         String[] codes = { "common.access.read", "common.access.set", "common.alarmLevel.none",
                 "common.alarmLevel.info", "common.alarmLevel.urgent", "common.alarmLevel.critical",

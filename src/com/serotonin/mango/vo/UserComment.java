@@ -23,6 +23,9 @@ import com.serotonin.web.taglib.DateFunctions;
 public class UserComment {
     public static final int TYPE_EVENT = 1;
     public static final int TYPE_POINT = 2;
+    public static final int TYPE_CHAT = 10;
+    public static final int TYPE_POINT_VALUE = 11;
+
 
     // Configuration fields
     private int userId;

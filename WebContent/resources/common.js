@@ -55,6 +55,10 @@ mango.longPoll = {};
 mango.longPoll.pollRequest = {};
 mango.longPoll.pollSessionId = Math.round(Math.random() * 1000000000);
 
+// tell the long poll we are interested in new chat messages
+mango.longPoll.pollRequest.chats = true;
+
+
 mango.longPoll.start = function() {
     MiscDwr.initializeLongPoll(mango.longPoll.pollSessionId, mango.longPoll.pollRequest, mango.longPoll.pollCB);
     dojo.addOnUnload(function() { MiscDwr.terminateLongPoll(mango.longPoll.pollSessionId); });
@@ -99,6 +103,10 @@ mango.longPoll.pollCB = function(response) {
     
     if (response.customViewStates)
         mango.view.setData(response.customViewStates);
+
+    // process new chat messages
+    if (response.chatContent) 
+     	appendChatContent(response.chatContent);
     
     if (mango.longPoll.lastPoll) {
         var duration = new Date().getTime() - mango.longPoll.lastPoll;
@@ -113,6 +121,41 @@ mango.longPoll.pollCB = function(response) {
     mango.longPoll.poll();
 }
 
+
+// don't know a better place to put this, it is common since chat box is on
+// every page. used to be in header.js
+function appendChatContent(userCommentList) {
+	var newChats = "";
+	var i = userCommentList.length - 1;
+	for (i = userCommentList.length - 1; i >= 0; i--) {
+
+		newChats = newChats + "\n[" + userCommentList[i].prettyTime + "] <"
+				+ userCommentList[i].username + "> "
+				+ userCommentList[i].comment;
+	}
+
+	$("chatText").value = $get("chatText") + newChats;
+	$("chatText").scrollTop = $("chatText").scrollHeight;
+}
+
+function addNewChatText(eventObj, textArea) {
+	if (eventObj.keyCode == 13) {
+		// enter was pressed.
+
+		// int typeId, int referenceId, String comment)
+		MiscDwr.addUserComment(10, 0, $get("newChatMessageText"));
+		$("newChatMessageText").value = "";
+		return false;
+	}
+}
+
+function removeDefaultText() {
+	if ($get("newChatMessageText") == "Type log message here") {
+		$("newChatMessageText").value = "";
+	}
+} 
+
+// end chat related functions
 
 //
 // Input control

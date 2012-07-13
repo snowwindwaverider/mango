@@ -42,6 +42,7 @@ public class LongPollState implements Serializable {
     private List<ViewComponentState> viewComponentStates = new ArrayList<ViewComponentState>();
     private String pendingAlarmsContent;
     private List<CustomComponentState> customViewStates = new ArrayList<CustomComponentState>();
+    private Long lastChat = (long) 0;
 
     public WatchListState getWatchListState(String id) {
         return (WatchListState) getBasePointState(id, watchListStates);
@@ -122,6 +123,14 @@ public class LongPollState implements Serializable {
     public void setCustomViewStates(List<CustomComponentState> customViewStates) {
         this.customViewStates = customViewStates;
     }
+
+	public void setLastChat(long lastChat) {
+		this.lastChat = lastChat;
+	}
+
+	public long getLastChat() {
+		return lastChat;
+	}
 
     /**
      * @param out

@@ -79,6 +79,8 @@
       function goHomeUrl() {
           MiscDwr.getHomeUrl(function(loc) { window.location = loc; });
       }
+
+ 
     </script>
   </c:if>
 </head>
@@ -86,9 +88,12 @@
 <body>
 <table width="100%" cellspacing="0" cellpadding="0" border="0" id="mainHeader">
   <tr>
-    <td><img src="images/mangoLogoMed.jpg" alt="Logo"/></td>
+    <td width="10%"><img src="images/mangoLogoMed.jpg" alt="Logo"/></td>
     <c:if test="${!simple}">
-      <td align="center" width="99%">
+      <td width=15% align="left">
+    <c:if test="${!empty instanceDescription}">
+      <span class="smallTitle" style="padding:5px; white-space: nowrap;">${instanceDescription}</span><br/>
+    </c:if>
         <a href="events.shtm">
           <span id="__header__alarmLevelDiv" style="display:none;">
             <img id="__header__alarmLevelImg" src="images/spacer.gif" alt="" border="0" title=""/>
@@ -97,12 +102,15 @@
         </a>
       </td>
     </c:if>
-    <c:if test="${!empty instanceDescription}">
-      <td align="right" valign="bottom" class="smallTitle" style="padding:5px; white-space: nowrap;">${instanceDescription}</td>
-    </c:if>
+  <c:if test="${!simple}">
+	  <c:if test="${!empty sessionUser}">
+	  <td><textarea style="margin: 0px; height: 63px; width:98%;" id="chatText" readonly="readonly"></textarea></td>
+	  <td></td>
+	  </c:if>
+  </c:if>
+  <td></td>
   </tr>
-</table>
-
+  </table>
 <c:if test="${!simple}">
   <table width="100%" cellspacing="0" cellpadding="0" border="0" id="subHeader">
     <tr>
@@ -144,7 +152,14 @@
         </c:if>
         <div id="headerMenuDescription" class="labelDiv" style="position:absolute;display:none;"></div>
       </td>
-      
+<td></td>
+<td>      		
+	<c:if test="${! empty sessionUser}">
+	 <textarea cols=60 id="newChatMessageText" onKeyPress="return addNewChatText(event,this);" onFocus="removeDefaultText();"
+                    style="margin: 0px; height: 15px; width: 98%;">Type log message here</textarea>
+                    
+	</c:if>   
+	</td>                 
       <td align="right">
         <c:if test="${!empty sessionUser}">
           <span class="copyTitle"><fmt:message key="header.user"/>: <b>${sessionUser.username}</b></span>
@@ -162,7 +177,8 @@
         </div>
       </td>
     </tr>
-  </table>
+  <!-- </table> -->
+</table>
 </c:if>
 
 <div style="padding:5px;">

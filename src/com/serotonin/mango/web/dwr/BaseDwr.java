@@ -233,6 +233,8 @@ abstract public class BaseDwr {
             EVENT_DAO.insertEventComment(referenceId, c);
         else if (typeId == UserComment.TYPE_POINT)
             new UserDao().insertUserComment(UserComment.TYPE_POINT, referenceId, c);
+		else if (typeId == UserComment.TYPE_CHAT)
+			new UserDao().insertUserComment(UserComment.TYPE_CHAT, 0, c);       
         else
             throw new ShouldNeverHappenException("Invalid comment type: " + typeId);
 
