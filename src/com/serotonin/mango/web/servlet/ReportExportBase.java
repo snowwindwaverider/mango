@@ -30,6 +30,7 @@ import com.serotonin.mango.db.dao.ReportDao;
 import com.serotonin.mango.vo.permission.Permissions;
 import com.serotonin.mango.vo.report.EventCsvStreamer;
 import com.serotonin.mango.vo.report.ReportCsvStreamer;
+import com.serotonin.mango.vo.report.ReportCsvStreamerTabular;
 import com.serotonin.mango.vo.report.ReportInstance;
 import com.serotonin.mango.vo.report.UserCommentCsvStreamer;
 
@@ -59,7 +60,7 @@ abstract public class ReportExportBase extends HttpServlet {
 
         ResourceBundle bundle = Common.getBundle();
         if (content == CONTENT_REPORT) {
-            ReportCsvStreamer creator = new ReportCsvStreamer(response.getWriter(), bundle);
+            ReportCsvStreamerTabular creator = new ReportCsvStreamerTabular(response.getWriter(), bundle);
             reportDao.reportInstanceData(instanceId, creator);
         }
         else if (content == CONTENT_EVENTS)

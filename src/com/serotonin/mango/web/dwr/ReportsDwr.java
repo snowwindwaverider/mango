@@ -85,7 +85,7 @@ public class ReportsDwr extends BaseDwr {
             boolean includeUserComments, int dateRangeType, int relativeDateType, int previousPeriodCount,
             int previousPeriodType, int pastPeriodCount, int pastPeriodType, boolean fromNone, int fromYear,
             int fromMonth, int fromDay, int fromHour, int fromMinute, boolean toNone, int toYear, int toMonth,
-            int toDay, int toHour, int toMinute, boolean schedule, int schedulePeriod, int runDelayMinutes,
+            int toDay, int toHour, int toMinute, int scopeType, int scopeCount, boolean schedule, int schedulePeriod, int runDelayMinutes,
             String scheduleCron, boolean email, boolean includeData, boolean zipData,
             List<RecipientListEntryBean> recipients) {
 
@@ -153,6 +153,8 @@ public class ReportsDwr extends BaseDwr {
         report.setToDay(toDay);
         report.setToHour(toHour);
         report.setToMinute(toMinute);
+        report.setScopeType(scopeType);
+        report.setScopeCount(scopeCount);
         report.setSchedule(schedule);
         report.setSchedulePeriod(schedulePeriod);
         report.setRunDelayMinutes(runDelayMinutes);
@@ -177,7 +179,7 @@ public class ReportsDwr extends BaseDwr {
             boolean includeUserComments, int dateRangeType, int relativeDateType, int previousPeriodCount,
             int previousPeriodType, int pastPeriodCount, int pastPeriodType, boolean fromNone, int fromYear,
             int fromMonth, int fromDay, int fromHour, int fromMinute, boolean toNone, int toYear, int toMonth,
-            int toDay, int toHour, int toMinute, boolean email, boolean includeData, boolean zipData,
+            int toDay, int toHour, int toMinute, int scopeType, int scopeCount, boolean email, boolean includeData, boolean zipData,
             List<RecipientListEntryBean> recipients) {
         DwrResponseI18n response = new DwrResponseI18n();
 
@@ -209,6 +211,8 @@ public class ReportsDwr extends BaseDwr {
             report.setToDay(toDay);
             report.setToHour(toHour);
             report.setToMinute(toMinute);
+            report.setScopeType(scopeType);
+            report.setScopeCount(scopeCount);
             report.setEmail(email);
             report.setIncludeData(includeData);
             report.setZipData(zipData);

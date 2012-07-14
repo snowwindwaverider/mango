@@ -99,6 +99,8 @@
         $set("toMinute", report.toMinute);
         $set("toNone", report.toNone);
         
+        $set("scopeType", report.scopeType);
+        $set("scopeCount", report.scopeCount);
         $set("schedule", report.schedule);
         $set("schedulePeriod", report.schedulePeriod);
         $set("runDelayMinutes", report.runDelayMinutes);
@@ -115,6 +117,7 @@
         updateDateRangeFields();
         updateScheduleFields();
         updateSchedulePeriodFields();
+        updateScopeFields();
         updateEmailFields();
     }
     
@@ -392,6 +395,15 @@
         display("emailDetails", email);
         display("emailRecipBody", email);
     }
+
+    function updateScopeFields() {
+ 		var scopeType = $get("scopeType");
+ 		if (scopeType == 0) {
+ 			setDisabled("scopeCount", true);
+ 		} else {
+ 			setDisabled("scopeCount", false);
+ 		}
+ 	}    
     
     function getReportPointIdsArray() {
         var points = new Array();
@@ -407,7 +419,7 @@
                 $get("prevPeriodType"), $get("pastPeriodCount"), $get("pastPeriodType"), $get("fromNone"),
                 $get("fromYear"), $get("fromMonth"), $get("fromDay"), $get("fromHour"), $get("fromMinute"),
                 $get("toNone"), $get("toYear"), $get("toMonth"), $get("toDay"), $get("toHour"), $get("toMinute"),
-                $get("schedule"), $get("schedulePeriod"), $get("runDelayMinutes"), $get("scheduleCron"), $get("email"),
+                $get("scopeType"), $get("scopeCount"), $get("schedule"), $get("schedulePeriod"), $get("runDelayMinutes"), $get("scheduleCron"), $get("email"),
                 $get("includeData"), $get("zipData"), emailRecipients.createRecipientArray(), function(response) {
             stopImageFader("saveImg");
             clearMessages();
@@ -477,7 +489,7 @@
                 $get("prevPeriodType"), $get("pastPeriodCount"), $get("pastPeriodType"), $get("fromNone"),
                 $get("fromYear"), $get("fromMonth"), $get("fromDay"), $get("fromHour"), $get("fromMinute"),
                 $get("toNone"), $get("toYear"), $get("toMonth"), $get("toDay"), $get("toHour"), $get("toMinute"),
-                $get("email"), $get("includeData"), $get("zipData"), emailRecipients.createRecipientArray(), function(response) {
+                $get("scopeType"), $get("scopeCount"), $get("email"), $get("includeData"), $get("zipData"), emailRecipients.createRecipientArray(), function(response) {
             stopImageFader("runImg");
             clearMessages();
             
@@ -696,6 +708,14 @@
                       </table>
                     </td>
                   </tr>
+                  <tr>
+                  	<td>Generate one report for: <input type=text id="scopeCount" class="formVeryShort" value="1">
+                  	<select id="scopeType" onchange="updateScopeFields();">
+                  		<option value="<c:out value="<%= ReportVO.SCOPE_ENTIRE %>"/>">Entire Range</option>
+                  		<tag:timePeriodOptions min="true" h="true" d="true" w="true" mon="true" y="true"/>
+                  	</select>
+                  	</td>
+                  </tr>                  
                 </table>
               </td>
             </tr>

@@ -46,6 +46,8 @@ public class ReportVO implements Serializable {
     public static final int RELATIVE_DATE_TYPE_PREVIOUS = 1;
     public static final int RELATIVE_DATE_TYPE_PAST = 2;
 
+    public static final int SCOPE_ENTIRE = 0;
+    
     public static final int SCHEDULE_CRON = 0;
 
     private int id = Common.NEW_ID;
@@ -75,6 +77,9 @@ public class ReportVO implements Serializable {
     private int toDay;
     private int toHour;
     private int toMinute;
+    
+    private int scopeType = ReportVO.SCOPE_ENTIRE;
+    private int scopeCount = 1;
 
     private boolean schedule;
     private int schedulePeriod = Common.TimePeriods.DAYS;
@@ -359,12 +364,28 @@ public class ReportVO implements Serializable {
         this.runDelayMinutes = runDelayMinutes;
     }
 
+	public int getScopeType() {
+		return scopeType;
+	}
+
+	public void setScopeType(int scopeType) {
+		this.scopeType = scopeType;
+	}
+
+	public int getScopeCount() {
+		return scopeCount;
+	}
+
+	public void setScopeCount(int scopeCount) {
+		this.scopeCount = scopeCount;
+	}
+
     //
     //
     // Serialization
     //
     private static final long serialVersionUID = -1;
-    private static final int version = 6;
+    private static final int version = 106;
 
     private void writeObject(ObjectOutputStream out) throws IOException {
         out.writeInt(version);
@@ -393,6 +414,8 @@ public class ReportVO implements Serializable {
         out.writeInt(toHour);
         out.writeInt(toMinute);
 
+        out.writeInt(scopeType);
+        out.writeInt(scopeCount);
         out.writeBoolean(schedule);
         out.writeInt(schedulePeriod);
         out.writeInt(runDelayMinutes);
@@ -611,7 +634,80 @@ public class ReportVO implements Serializable {
             recipients = (List<RecipientListEntryBean>) in.readObject();
             includeData = in.readBoolean();
             zipData = in.readBoolean();
-        }
+		} else if (ver == 103) {
+			points = convertToReportPointVOs((List<Integer>) in.readObject());
+			includeEvents = in.readInt();
+			if (in.readInt() > 1) {
+				includeUserComments = true;
+			} else {
+				includeUserComments = false;
+			}
+			dateRangeType = in.readInt();
+			relativeDateType = in.readInt();
+
+			previousPeriodCount = in.readInt();
+			previousPeriodType = in.readInt();
+			pastPeriodCount = in.readInt();
+			pastPeriodType = in.readInt();
+
+			fromNone = in.readBoolean();
+			fromYear = in.readInt();
+			fromMonth = in.readInt();
+			fromDay = in.readInt();
+			fromHour = in.readInt();
+			fromMinute = in.readInt();
+			toNone = in.readBoolean();
+			toYear = in.readInt();
+			toMonth = in.readInt();
+			toDay = in.readInt();
+			toHour = in.readInt();
+			toMinute = in.readInt();
+
+			scopeType = in.readInt();
+			scopeCount = in.readInt();
+			schedule = in.readBoolean();
+			schedulePeriod = in.readInt();
+			runDelayMinutes = in.readInt();
+			scheduleCron = SerializationHelper.readSafeUTF(in);
+			email = in.readBoolean();
+			recipients = (List<RecipientListEntryBean>) in.readObject();
+			includeData = in.readBoolean();
+		} else if (ver == 106) {
+	        points = (List<ReportPointVO>) in.readObject();
+	        includeEvents = in.readInt();
+	        includeUserComments = in.readBoolean();
+	        dateRangeType = in.readInt();
+	        relativeDateType = in.readInt();
+	
+	        previousPeriodCount = in.readInt();
+	        previousPeriodType = in.readInt();
+	        pastPeriodCount = in.readInt();
+	        pastPeriodType = in.readInt();
+	
+	        fromNone = in.readBoolean();
+	        fromYear = in.readInt();
+	        fromMonth = in.readInt();
+	        fromDay = in.readInt();
+	        fromHour = in.readInt();
+	        fromMinute = in.readInt();
+	        toNone = in.readBoolean();
+	        toYear = in.readInt();
+	        toMonth = in.readInt();
+	        toDay = in.readInt();
+	        toHour = in.readInt();
+	        toMinute = in.readInt();
+
+	        scopeType = in.readInt();
+			scopeCount = in.readInt();	
+	        schedule = in.readBoolean();
+	        schedulePeriod = in.readInt();
+	        runDelayMinutes = in.readInt();
+	        scheduleCron = SerializationHelper.readSafeUTF(in);
+	        email = in.readBoolean();
+	        recipients = (List<RecipientListEntryBean>) in.readObject();
+	        includeData = in.readBoolean();
+	        zipData = in.readBoolean();
+		}
     }
 
     private static List<ReportPointVO> convertToReportPointVOs(List<Integer> ids) {
