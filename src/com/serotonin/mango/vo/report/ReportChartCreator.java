@@ -512,7 +512,7 @@ public class ReportChartCreator {
             try {
                 if (createExportFile) {
                     exportFile = File.createTempFile("tempCSV", ".csv");
-                    reportCsvStreamer = new ReportCsvStreamer(new PrintWriter(new FileWriter(exportFile)), bundle);
+                    reportCsvStreamer = new ReportCsvStreamerTabular(new PrintWriter(new FileWriter(exportFile)), bundle);
                 }
             }
             catch (IOException e) {
