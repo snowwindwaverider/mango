@@ -610,7 +610,7 @@ public class ReportChartCreator {
             if (quantizer != null)
                 quantizer.data(rdv.getValue(), rdv.getTime());
             point.getStats().addValueTime(rdv);
-            if (reportCsvStreamer != null)
+            if (reportCsvStreamer != null && !(rdv.getValue() instanceof ImageValue))
                 reportCsvStreamer.pointData(rdv);
         }
 
