@@ -492,7 +492,7 @@ public class ReportChartCreator {
         private final int imageWidth;
 
         File exportFile;
-        private ReportCsvStreamer reportCsvStreamer;
+        private ReportCsvStreamerTabular reportCsvStreamer;
 
         private final List<PointStatistics> pointStatistics;
         private final PointTimeSeriesCollection pointTimeSeriesCollection;
