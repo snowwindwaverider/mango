@@ -167,7 +167,18 @@ public class PointValueDao extends BaseDao {
             if (!imageValue.isSaved()) {
                 imageValue.setId(id);
 
-                File file = new File(Common.getFiledataPath(), imageValue.getFilename());
+				File directory = new File(Common.getFiledataPath() + "/"
+						+ imageValue.getDirectoryName());
+
+				// create a directory for this year if it does not exist.
+				if (!directory.exists())
+					try {
+						directory.mkdirs();
+					} catch (Exception e) {
+						throw new ImageSaveException(e);
+					}
+
+				File file = new File(directory, imageValue.getFilename());            
 
                 // Write the file.
                 FileOutputStream out = null;
@@ -371,7 +382,8 @@ public class PointValueDao extends BaseDao {
             break;
         case (DataTypes.IMAGE):
         	// changed second parameter on imagevalue constructor from column 4 to 2. seems like a bug, was preventing image type from being assigned correctly.
-            value = new ImageValue(Integer.parseInt(rs.getString(firstParameter + 2)), rs.getInt(firstParameter + 1));
+        	// get the timestamp also to determine the year, which is part of the filedata path
+            value = new ImageValue(Integer.parseInt(rs.getString(firstParameter + 2)), rs.getInt(firstParameter + 1), rs.getLong(firstParameter + 4));
             break;
         default:
             value = null;

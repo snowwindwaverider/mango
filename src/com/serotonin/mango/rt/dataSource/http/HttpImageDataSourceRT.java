@@ -244,7 +244,7 @@ public class HttpImageDataSourceRT extends PollingDataSource {
             
             // Save the new image
             try {
-                dp.updatePointValue(new PointValueTime(new ImageValue(data, ImageValue.TYPE_JPG), time), false);
+                dp.updatePointValue(new PointValueTime(new ImageValue(data, ImageValue.TYPE_JPG, time), time), false);
             }
             catch (ImageSaveException e) {
                 saveFailure = new LocalizableMessage("event.httpImage.saveError", e.getMessage());

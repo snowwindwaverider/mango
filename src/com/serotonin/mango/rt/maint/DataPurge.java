@@ -21,6 +21,7 @@ package com.serotonin.mango.rt.maint;
 import java.io.File;
 import java.text.ParseException;
 import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -99,6 +100,20 @@ public class DataPurge {
         return rm.purgeDataPointValues(dataPoint.getId(), cutoff.getMillis());
     }
 
+	private List<File> listFiles(List<File> files, File dir) {
+		if (files == null)
+			files = new LinkedList<File>();
+
+		if (!dir.isDirectory()) {
+			files.add(dir);
+			return files;
+		}
+
+		for (File file : dir.listFiles())
+			listFiles(files, file);
+		return files;
+	}
+    
     private void filedataPurge() {
         int deleteCount = 0;
 
@@ -107,13 +122,14 @@ public class DataPurge {
 
         // Get all of the existing filenames.
         File dir = new File(Common.getFiledataPath());
-        String[] files = dir.list();
+        List<File> files = new LinkedList<File>();
+        files = listFiles(files , dir);
         if (files != null) {
-            for (String filename : files) {
-                long pointId = ImageValue.parseIdFromFilename(filename);
+            for (File file : files) {
+                long pointId = ImageValue.parseIdFromFilename(file.getPath());
                 if (Collections.binarySearch(validIds, pointId) < 0) {
                     // Not found, so the point was deleted from the database. Delete the file.
-                    new File(dir, filename).delete();
+                    file.delete();
                     deleteCount++;
                 }
             }

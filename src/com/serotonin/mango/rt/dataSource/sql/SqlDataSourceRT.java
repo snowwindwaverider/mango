@@ -284,7 +284,7 @@ public class SqlDataSourceRT extends PollingDataSource {
             else if (dataType == DataTypes.IMAGE) {
                 ByteArrayOutputStream out = new ByteArrayOutputStream();
                 StreamUtils.transfer(rs.getBlob(fieldName).getBinaryStream(), out);
-                return new ImageValue(out.toByteArray(), ImageValue.TYPE_JPG);
+                return new ImageValue(out.toByteArray(), ImageValue.TYPE_JPG, time);
             }
             else
                 throw new ShouldNeverHappenException("What's this?: " + locatorVO.getDataTypeId());

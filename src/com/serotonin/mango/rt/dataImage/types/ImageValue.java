@@ -25,6 +25,10 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Arrays;
 
+import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
+
 import com.serotonin.InvalidArgumentException;
 import com.serotonin.io.StreamUtils;
 import com.serotonin.mango.Common;
@@ -37,28 +41,37 @@ import com.serotonin.util.image.ImageUtils;
  */
 public class ImageValue extends MangoValue implements Comparable<ImageValue> {
     private static final String FILENAME_PREFIX = "img";
+    private static final DateTimeFormatter dtf = DateTimeFormat.forPattern("yyyy/yyyy-MM-dd");
 
     public static final int TYPE_JPG = 1;
     private static final String[] TYPES = { "", "jpg" };
 
     private long id = Common.NEW_ID;
     private int type;
+    private long timestamp;
     private byte[] data;
 
-    public ImageValue(long id, int type) {
+    public ImageValue(long id, int type, long timestamp) {
         this.id = id;
         this.type = type;
+        this.timestamp = timestamp;
     }
 
-    public ImageValue(byte[] data, int type) {
+    public ImageValue(byte[] data, int type, long timestamp) {
         this.data = data;
         this.type = type;
+        this.timestamp = timestamp;
     }
 
     public ImageValue(String filename) throws InvalidArgumentException {
         id = parseIdFromFilename(filename);
         if (id == -1)
             throw new InvalidArgumentException();
+        
+        timestamp = parseDateFromFilePath(filename);
+        if (timestamp == -1) 
+        	throw new InvalidArgumentException();
+        
 
         int dot = filename.indexOf('.');
         if (dot == -1)
@@ -74,7 +87,18 @@ public class ImageValue extends MangoValue implements Comparable<ImageValue> {
         return FILENAME_PREFIX + id + '.' + TYPES[type];
     }
 
-    public static long parseIdFromFilename(String filename) {
+        public String getDirectoryName() { 
+    	      return dtf.print(new DateTime(timestamp));
+    	    }
+    	    
+	public static long parseIdFromFilename(String filename) {
+		// could have a path in front of the filename so lop anyting before a /
+		// off
+		int slash = filename.lastIndexOf(File.separator);
+		if (slash != -1 && !filename.endsWith(File.separator)) {
+			filename = filename.substring(slash + 1, filename.length());
+		}
+
         if (!filename.startsWith(FILENAME_PREFIX))
             return -1;
         int dot = filename.indexOf('.');
@@ -91,6 +115,35 @@ public class ImageValue extends MangoValue implements Comparable<ImageValue> {
         }
     }
 
+	public static long parseDateFromFilePath(String filename) {
+
+		// expecting
+		// (Common.getFileDataPath)/yyyy/yyyy-mm-dd/(\d+)\.(jpg|png|TYPE)
+		filename = filename.replace(Common.getFiledataPath(), "");
+
+		// don't really know if filedatapath ends with /
+		if (filename.startsWith(File.separator))
+			filename = filename.substring(1, filename.length());
+
+		// expect to have yyyy/yyyy-mm-dd/filename
+		int slash = filename.lastIndexOf(File.separator);
+		if (slash == -1)
+			return -1;
+
+		filename = filename.substring(1, slash - 1);
+
+		return dtf.parseDateTime(filename).getMillis();
+	}
+		    	
+	public String getFilePath() {
+		File f = new File(Common.getFiledataPath() + "/" + getDirectoryName(),
+				getFilename());
+		if (!f.exists())
+			f = new File(Common.getFiledataPath(), getFilename());
+		return f.getPath();
+	}
+		    
+	
     @Override
     public String toString() {
         return getFilename();
@@ -108,7 +161,7 @@ public class ImageValue extends MangoValue implements Comparable<ImageValue> {
         try {
             if (data != null)
                 return ImageUtils.createImage(data);
-            return ImageUtils.loadImage(new File(Common.getFiledataPath(), getFilename()).getPath());
+            return ImageUtils.loadImage(getFilePath());
         }
         catch (InterruptedException e) {
             // no op
@@ -123,7 +176,7 @@ public class ImageValue extends MangoValue implements Comparable<ImageValue> {
         FileInputStream in = null;
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try {
-            in = new FileInputStream(new File(Common.getFiledataPath(), getFilename()).getPath());
+            in = new FileInputStream(getFilePath());
             StreamUtils.transfer(in, out);
         }
         finally {

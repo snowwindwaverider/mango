@@ -463,7 +463,7 @@ public class ReportDao extends BaseDao {
                                     rdv.setValue(new AlphanumericValue(rs.getString(3)));
                                 break;
                             case (DataTypes.IMAGE):
-                                rdv.setValue(new ImageValue(Integer.parseInt(rs.getString(2)), rs.getInt(1)));
+                                rdv.setValue(new ImageValue(Integer.parseInt(rs.getString(2)), rs.getInt(1), rs.getLong(4)));
                                 break;
                             default:
                                 rdv.setValue(null);
