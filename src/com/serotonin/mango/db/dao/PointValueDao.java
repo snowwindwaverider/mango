@@ -370,7 +370,7 @@ public class PointValueDao extends BaseDao {
             value = new AlphanumericValue(s);
             break;
         case (DataTypes.IMAGE):
-            value = new ImageValue(Integer.parseInt(rs.getString(firstParameter + 2)), rs.getInt(firstParameter + 3));
+            value = new ImageValue(Integer.parseInt(rs.getString(firstParameter + 2)), rs.getInt(firstParameter + 1));
             break;
         default:
             value = null;

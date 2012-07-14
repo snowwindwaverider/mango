@@ -115,6 +115,7 @@
   <table cellspacing="5">
     <#assign col = 1/>
     <#list points as point>
+    <#if point.dataType != IMAGE>
       <#assign col = col + 1/>
       <#if col == 2><#assign col = 0/></#if>
       <#if col == 0><tr></#if>
@@ -173,11 +174,17 @@
                 </table>
               </td>
             </tr>
-          <#elseif point.dataType == ALPHANUMERIC || point.dataType == IMAGE>
+          <#elseif point.dataType == ALPHANUMERIC>
             <tr>
               <td class="label"><@fmt key="common.stats.count"/></td>
               <td>${point.valueChangeCount}</td>
             </tr>
+            <#if point.stopValue??>
+            <tr>
+              <td class="label">Stop Value</td>
+              <td>${point.stopValue}</td>
+            </tr>  
+            </#if>              
           </#if>
           <#if point.chartData>
             <tr>
@@ -188,6 +195,7 @@
       </td>
       
       <#if col == 1></tr></#if>
+    </#if>
     </#list>
     <#if col < 1></tr></#if>
   </table>
@@ -299,6 +307,36 @@
       </table>
     </#if>
   </#if>
+  
+  <#-- include any points that are of type image from httpImageRetrieve -->
+  <#list points as point>
+  <#if point.dataType == IMAGE>
+  <table>
+ 		  <tr><td colspan="2" class="pointName">${point.name}</td></tr>
+          <tr>
+            <td class="label"><@fmt key="reports.dataType"/></td>
+            <td>${point.dataTypeDescription}</td>
+          </tr>
+          <#if point.startValue??>
+            <tr>
+              <td class="label"><@fmt key="common.stats.start"/></td>
+              <td>${point.startValue}</td>
+            </tr>
+          </#if>
+              <tr>
+              <td class="label"><@fmt key="common.stats.count"/></td>
+             <td>${point.valueChangeCount}</td>
+            </tr>
+
+          <#if point.chartData>
+            <tr>
+              <td colspan="2"><img src="${inline}${point.chartPath}"/></td>
+            </tr>
+          </#if>
+  </table>
+  </#if>
+  </#list> 
+
 </div>
 
 <table width="100%" cellspacing="0" cellpadding="0" border="0">

@@ -42,6 +42,7 @@ import com.serotonin.mango.Common;
 import com.serotonin.mango.DataTypes;
 import com.serotonin.mango.db.dao.ReportDao;
 import com.serotonin.mango.rt.dataImage.PointValueTime;
+import com.serotonin.mango.rt.dataImage.types.ImageValue;
 import com.serotonin.mango.rt.dataImage.types.MangoValue;
 import com.serotonin.mango.rt.event.EventInstance;
 import com.serotonin.mango.view.stats.AbstractDataQuantizer;
@@ -148,6 +149,32 @@ public class ReportChartCreator {
                 if (inlinePrefix != null)
                     model.put("chartName", inlinePrefix + pointStat.getChartName());
                 pointStat.setImageData(ImageChartUtils.getChartData(ptsc, POINT_IMAGE_WIDTH, POINT_IMAGE_HEIGHT));
+            } else {
+
+            	// if the point data type is image, from httpImageRetriever, then add it to the report 
+				if (pointStat.getDataType() == DataTypes.IMAGE) {
+
+					ImageValue img = (ImageValue) pointStat.getStats().getLastValue();
+					if (img != null) {
+						// there might not have been an image during this time
+						// period: if data source was disabled
+						// or simply one wasn't logged.
+						try {
+							pointStat.setImageData(img.getImageData());
+							pointStat.setChartName(img.toString());
+							if (inlinePrefix != null) {
+								model.put("chartName", pointStat.getChartName());
+							} else {
+								model.put("chartName", IMAGE_SERVLET
+										+ pointStat.getChartName());
+							}
+						} catch (IOException e) {
+							LOG.error("failed to retrieve image data", e);
+						}
+					}
+				}        	
+            	
+            	
             }
         }
 
@@ -283,6 +310,7 @@ public class ReportChartCreator {
         private Color numericTimeSeriesColor;
         private DiscreteTimeSeries discreteTimeSeries;
         private byte[] imageData;
+        private String chartName;
 
         public PointStatistics(int reportPointId) {
             this.reportPointId = reportPointId;
@@ -408,8 +436,12 @@ public class ReportChartCreator {
             return Integer.toString(((ValueChangeCounter) stats).getChangeCount());
         }
 
+		public String getStopValue() {
+			return ((ValueChangeCounter) stats).getLastValue().toString();
+		}   
+        
         public boolean isChartData() {
-            return numericTimeSeries != null || discreteTimeSeries != null;
+            return numericTimeSeries != null || discreteTimeSeries != null || imageData != null;
         }
 
         public String getChartPath() {
@@ -419,7 +451,15 @@ public class ReportChartCreator {
         }
 
         public String getChartName() {
-            return "reportPointChart" + reportPointId + ".png";
+            //return "reportPointChart" + reportPointId + ".png";
+			if (chartName == null)
+				return "reportPointChart" + reportPointId + ".png";
+			else
+				return chartName;
+		}
+
+		public void setChartName(String chartName) {
+			this.chartName = chartName;    	
         }
     }
 
@@ -561,7 +601,8 @@ public class ReportChartCreator {
                 numericTimeSeries = null;
             }
 
-            if (reportCsvStreamer != null)
+            // image points don't go in CSV files
+            if (reportCsvStreamer != null && pointInfo.getDataType() != DataTypes.IMAGE)
                 reportCsvStreamer.startPoint(pointInfo);
         }
 

@@ -138,6 +138,10 @@ public class StartsAndRuntimeList implements StatisticsGenerator {
         return sar;
     }
 
+    public Object getLastValue() {
+    	return lastValue;
+    }    
+    
     public String getHelp() {
         return toString();
     }
