@@ -180,13 +180,17 @@ public class ReportChartCreator {
             // Only provide the list of point comments to the report. The event comments have already be correlated
             // into the events list.
             List<ReportUserComment> pointComments = new ArrayList<ReportUserComment>();
+            List<ReportUserComment> chatMessages = new ArrayList<ReportUserComment>();
             for (ReportUserComment c : comments) {
                 if (c.getCommentType() == UserComment.TYPE_POINT)
                     pointComments.add(c);
+                if (c.getCommentType() == UserComment.TYPE_CHAT)
+                	chatMessages.add(c);
             }
 
             model.put("includeUserComments", true);
             model.put("userComments", pointComments);
+            model.put("chatMessages", chatMessages);
         }
         else
             model.put("includeUserComments", false);

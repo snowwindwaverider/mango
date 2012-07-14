@@ -274,6 +274,27 @@
   </#if>
   
   <#if includeUserComments>
+  	<#if chatMessages?size != 0>
+  	<h2>Chat Log</h2>
+     <table cellspacing="1" cellpadding="0">
+        <#list chatMessages as comment>
+          <tr>
+            <td valign="top">
+             <span class="copyTitle">
+                ${comment.prettyTime}
+              </span></td><td width=3></td>
+            <td valign="top">
+         		<#if comment.username??>
+                  ${comment.username}: 
+                <#else>
+                  <@fmt key="common.deleted"/>: 
+                </#if>${comment.comment}
+            </td>
+          </tr>
+        </#list>
+      </table>  	
+  	</#if>
+  
     <h2><@fmt key="reports.pointComments"/></h2>
     <#if userComments?size == 0>
       <@fmt key="reports.pointComments.empty"/>

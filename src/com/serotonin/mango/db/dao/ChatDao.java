@@ -7,11 +7,11 @@ import com.serotonin.mango.vo.UserComment;
 public class ChatDao extends BaseDao {
 
 	private static final String LAST_CHAT_SELECT = UserCommentRowMapper.USER_COMMENT_SELECT + 
-		" order by uc.ts desc";
+		" where uc.commentType=" + UserComment.TYPE_CHAT + " order by uc.ts desc";
 	private static final String LATEST_CHAT_SELECT = UserCommentRowMapper.USER_COMMENT_SELECT +
-		"where uc.ts>? order by uc.ts desc";
+		"where uc.commentType=" + UserComment.TYPE_CHAT + " and uc.ts>? order by uc.ts desc";
 	private static final String CHAT_RANGE_SELECT = UserCommentRowMapper.USER_COMMENT_SELECT + 
-		"where uc.ts>? and uc.ts<? order by uc.ts asc";
+		"where uc.commentType=" + UserComment.TYPE_CHAT + " and uc.ts>? and uc.ts<? order by uc.ts asc";
 	
 	public List<UserComment> getLastChat() {
 		List<UserComment> ucs = query(LAST_CHAT_SELECT, new Object[] {}, new UserCommentRowMapper(), 1);

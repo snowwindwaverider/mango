@@ -359,6 +359,22 @@ public class ReportDao extends BaseDao {
             }
         }
 
+        // Insert the chat messages
+        if (instance.isIncludeUserComments()) {
+            String commentSQL = "insert into reportInstanceUserComments " //
+                    + "  (reportInstanceId, username, commentType, typeKey, ts, commentText)" //
+                    + "  select " + instance.getId() + ", u.username, " + UserComment.TYPE_CHAT + ", uc.typeKey" //
+                    + ", uc.ts, uc.commentText " //
+                    + "  from userComments uc " //
+                    + "    left join users u on uc.userId=u.id " //                    
+                    + "  where uc.commentType=" + UserComment.TYPE_CHAT + " "; //
+
+
+            // Only include comments made in the duration of the report.
+            commentSQL += StringUtils.replaceMacro(timestampSql, "field", "uc.ts");
+            ejt.update(commentSQL, appendParameters(timestampParams));
+        }        
+        
         // Insert the reportInstanceUserComments records for the selected events
         if (instance.isIncludeUserComments()) {
             String commentSQL = "insert into reportInstanceUserComments " //
@@ -369,7 +385,7 @@ public class ReportDao extends BaseDao {
                     + "    left join users u on uc.userId=u.id " //
                     + "    join reportInstanceEvents re on re.eventId=uc.typeKey " //
                     + "  where uc.commentType=" + UserComment.TYPE_EVENT //
-                    + "    and re.reportInstanceId=? ";
+                      + "    and re.reportInstanceId=? ";
             ejt.update(commentSQL, new Object[] { instance.getId() });
         }
 
