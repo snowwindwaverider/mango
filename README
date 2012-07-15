@@ -1,0 +1,42 @@
+Mango, by Serotonin Software. Open source to version 1.12.4, versions 1.12.5, 1.13 and going forwards are closed source.  
+see http://mango.serotoninsoftware.com
+
+ScadaBR fork of mango that has added additional visualizations with adobe flex and has contributed OPC, DNP3 and is working on 61850 protocol
+http://www.scadabr.org.br
+
+This repository has several branches based off mango 1.12.4 in branch master.
+
+The branches are:
+main:
+bugs common to all branches are fixed here, and main will be merged in to all branches
+
+chat:
+adds a shoddy text area in the header, allows multiple people logged in at the same time to type messages to eachother.  last messages are immediately obvious upon login. messages are included in reports if usercomments are selected.
+
+eh_dspoll:
+Adds a new Event Handler which triggers a poll of a datasource. I use this for battery powered IP cameras which are turned on, and when they are on an event triggers the update of the data source (camera image via httpimageretriever). the camera is subsequently powered off. More solar panels or wind turbines and more batteries would also work.
+
+httpimageoverlay:
+allows datapoints to be overlayed on images retrieved via http image data source. Convenient if a camera shows a pond and pond level is written on the image, or a picture of flag with wind speed, etc.
+
+filedatapath:
+makes images save in directory structure following YYYY/YYYY-MM-DD.  Folders named this way are automatically listed in chronological order. Many cameras saving images every 5 or 10 minutes generate a lot of files! saving the files by year and day makes it easier to deal with them.
+
+quantized_interval_logging:
+changes interval logging so that the values are logged at precise moments in time, such as HH:00, HH:15, HH:30, HH:45 for 15 minute interval.
+
+reportimages:
+include images from httpimagedatasource in reports. handy for correlating the last point in the plots with a real picture of the process.
+
+reportscope: 
+allows many reports to be scheduled at once. I generate daily reports for external consumption but they only need to be delivered on monday. By setting the report start and end dates for the previous week, but using the report scope to generate 1 report per day, 7 individual reports are generated.
+
+sms_alarms:
+piggybacks on the email event handler and sends the event by text message if the priority of the event is larger than the priority set for the user and the user has a phone number defined. Uses the message media sms service: http://messagemedia.com.au.  They provide excellent service.
+Allows operators to set a loud alert for text messages on their phone that they wouldn't want to do for e-mail. Also SMS messages are delivered in areas with no data coverage.  This was implemented before smartphones were common.
+
+
+
+
+
+
