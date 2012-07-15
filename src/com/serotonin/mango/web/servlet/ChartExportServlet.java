@@ -16,7 +16,7 @@ import com.serotonin.mango.rt.dataImage.PointValueTime;
 import com.serotonin.mango.vo.DataPointVO;
 import com.serotonin.mango.vo.User;
 import com.serotonin.mango.vo.permission.Permissions;
-import com.serotonin.mango.vo.report.ReportCsvStreamer;
+import com.serotonin.mango.vo.report.ReportCsvStreamerTabular;
 import com.serotonin.mango.vo.report.ReportDataValue;
 import com.serotonin.mango.vo.report.ReportPointInfo;
 import com.serotonin.mango.web.dwr.beans.DataExportDefinition;
@@ -44,7 +44,7 @@ public class ChartExportServlet extends HttpServlet {
         response.setContentType("text/csv");
 
         final ResourceBundle bundle = Common.getBundle();
-        final ReportCsvStreamer exportCreator = new ReportCsvStreamer(response.getWriter(), bundle);
+        final ReportCsvStreamerTabular exportCreator = new ReportCsvStreamerTabular(response.getWriter(), bundle);
 
         final ReportDataValue rdv = new ReportDataValue();
         MappedRowCallback<PointValueTime> callback = new MappedRowCallback<PointValueTime>() {

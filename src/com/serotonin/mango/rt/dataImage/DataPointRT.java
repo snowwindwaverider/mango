@@ -18,6 +18,7 @@
  */
 package com.serotonin.mango.rt.dataImage;
 
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -44,6 +45,7 @@ import com.serotonin.mango.view.stats.AnalogStatistics;
 import com.serotonin.mango.view.stats.IValueTime;
 import com.serotonin.mango.vo.DataPointVO;
 import com.serotonin.mango.vo.event.PointEventDetectorVO;
+import com.serotonin.timer.CronTimerTrigger;
 import com.serotonin.timer.FixedRateTrigger;
 import com.serotonin.timer.TimerTask;
 import com.serotonin.util.ILifecycle;
@@ -268,9 +270,48 @@ public class DataPointRT implements IDataPoint, ILifecycle, TimeoutClient {
             if (vo.getLoggingType() != DataPointVO.LoggingTypes.INTERVAL)
                 return;
 
-            intervalLoggingTask = new TimeoutTask(new FixedRateTrigger(0, Common.getMillis(
-                    vo.getIntervalLoggingPeriodType(), vo.getIntervalLoggingPeriod())), this);
+            // make the intervals occur on quantized seconds, minutes, hours, etc.
+            // eg if 15 minute interval logging specified task will be triggered
+            // at HH:00, HH:15, HH:30, HH:45. As long as it doesn't take more
+            // than a second for the task to get run the timestamps will be 
+            // on the same second for all data points with interval logging
+			String cronExpression = "";
+			boolean scheduled = false;
+			
+			if (vo.getIntervalLoggingPeriodType() == Common.TimePeriods.SECONDS) {
+				cronExpression = "0/" + vo.getIntervalLoggingPeriod()
+						+ " * * * * ?";
+			}
+			if (vo.getIntervalLoggingPeriodType() == Common.TimePeriods.MINUTES) {
+				cronExpression = "0 0/" + vo.getIntervalLoggingPeriod()
+						+ " * * * ?";
+			}
 
+			if (vo.getIntervalLoggingPeriodType() == Common.TimePeriods.HOURS) {
+				cronExpression = "0 0 0/" + vo.getIntervalLoggingPeriod()
+						+ " * * ?";
+			}
+
+			if (vo.getIntervalLoggingPeriodType() == Common.TimePeriods.DAYS) {
+				cronExpression = "0 0 0 0/" + vo.getIntervalLoggingPeriod()
+						+ " * ?";
+			}
+			
+			try {
+				CronTimerTrigger trigger = new CronTimerTrigger(cronExpression);
+	            intervalLoggingTask = new TimeoutTask(trigger, this);
+				scheduled = true;
+			} catch (ParseException e) {
+				scheduled = false;
+			}
+
+			if (!scheduled) {
+				// fall back to standard interval logging where the intervals are not at any moment in particular
+	            intervalLoggingTask = new TimeoutTask(new FixedRateTrigger(0, Common.getMillis(
+	                    vo.getIntervalLoggingPeriodType(), vo.getIntervalLoggingPeriod())), this);
+				scheduled = true;
+			}          
+            
             intervalValue = pointValue;
             if (vo.getIntervalLoggingType() == DataPointVO.IntervalLoggingTypes.AVERAGE) {
                 intervalStartTime = System.currentTimeMillis();

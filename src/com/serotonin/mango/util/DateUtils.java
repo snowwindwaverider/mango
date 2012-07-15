@@ -40,6 +40,15 @@ public class DateUtils {
         return truncateDateTime(new DateTime(time), periodType).getMillis();
     }
 
+	public static long plus(long time, int periodType, int periods) {
+		return plus(new DateTime(time), periodType, periods).getMillis();
+	}
+
+	public static DateTime plus(DateTime time, int periodType, int periods) {
+		return time.plus(Common.getPeriod(periodType, periods));
+	}
+    	    
+
     public static DateTime truncateDateTime(DateTime time, int periodType) {
         if (periodType == TimePeriods.SECONDS)
             time = time.minus(time.getMillisOfSecond());

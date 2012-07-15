@@ -65,7 +65,11 @@ public class ValueChangeCounter implements StatisticsGenerator {
     public int getChangeCount() {
         return changes;
     }
-
+    
+    public Object getLastValue() {
+    	return lastValue;
+    }
+    
     public String getHelp() {
         return toString();
     }

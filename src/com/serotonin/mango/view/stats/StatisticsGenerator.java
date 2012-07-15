@@ -23,6 +23,6 @@ package com.serotonin.mango.view.stats;
  */
 public interface StatisticsGenerator {
     void addValueTime(IValueTime vt);
-
+    Object getLastValue();
     void done();
 }

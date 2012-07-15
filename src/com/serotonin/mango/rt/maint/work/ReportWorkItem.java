@@ -42,6 +42,7 @@ import com.serotonin.mango.db.dao.DataPointDao;
 import com.serotonin.mango.db.dao.MailingListDao;
 import com.serotonin.mango.db.dao.ReportDao;
 import com.serotonin.mango.db.dao.UserDao;
+import com.serotonin.mango.util.DateUtils;
 import com.serotonin.mango.vo.DataPointVO;
 import com.serotonin.mango.vo.User;
 import com.serotonin.mango.vo.permission.Permissions;
@@ -68,7 +69,87 @@ public class ReportWorkItem implements WorkItem {
         return WorkItem.PRIORITY_LOW;
     }
 
-    public static void queueReport(ReportVO report) {
+	public static void queueReport(ReportVO report) {
+		if (report.getScopeType() == ReportVO.SCOPE_ENTIRE) {
+			// create one report instance for entire reporting period
+			createReportInstance(report);
+		} else {
+			// create many report instances for the reporting period.
+
+			DateTime startTime = new DateTime();
+			DateTime endTime = new DateTime();
+
+			// determine start and end time for the reporting period.
+			if (report.getDateRangeType() == ReportVO.DATE_RANGE_TYPE_SPECIFIC) {
+				startTime = new DateTime(report.getFromYear(),
+						report.getFromMonth(), report.getFromDay(),
+						report.getFromHour(), report.getFromMinute(), 0, 0);
+				endTime = new DateTime(report.getToYear(), report.getToMonth(),
+						report.getToDay(), report.getToHour(),
+						report.getToMinute(), 0, 0);
+			} else {
+				if (report.getRelativeDateType() == ReportVO.RELATIVE_DATE_TYPE_PAST) {
+					endTime = new DateTime();
+					startTime = DateUtils.minus(endTime,
+							report.getPastPeriodType(),
+							report.getPastPeriodCount());
+				} else {
+					endTime = DateUtils.truncateDateTime(new DateTime(),
+							report.getPreviousPeriodType());
+					startTime = DateUtils.minus(endTime,
+							report.getPreviousPeriodType(),
+							report.getPreviousPeriodCount());
+				}
+			}
+
+			// DateTime chunkEndTime = startTime.plusDays(1);
+			DateTime chunkEndTime = DateUtils.plus(startTime,
+					report.getScopeType(), report.getScopeCount());
+
+			if (chunkEndTime.compareTo(endTime) > 0) {
+				// this report instance will be the last one as we have exceeded
+				// end time.
+				chunkEndTime = endTime.toDateTime();
+			}
+			while (chunkEndTime.compareTo(endTime) <= 0) {
+
+				report.setToYear(chunkEndTime.getYear());
+				report.setToMonth(chunkEndTime.getMonthOfYear());
+				report.setToDay(chunkEndTime.getDayOfMonth());
+				report.setToHour(chunkEndTime.getHourOfDay());
+				report.setToMinute(chunkEndTime.getMinuteOfHour());
+
+				report.setFromYear(startTime.getYear());
+				report.setFromMonth(startTime.getMonthOfYear());
+				report.setFromDay(startTime.getDayOfMonth());
+				report.setFromHour(startTime.getHourOfDay());
+				report.setFromMinute(startTime.getMinuteOfHour());
+
+				// set report to run for these specific dates even if the
+				// reporting period was specified relative
+				report.setDateRangeType(ReportVO.DATE_RANGE_TYPE_SPECIFIC);
+
+				// add work item for these dates
+				createReportInstance(report);
+
+				// start time becomes the end of last time chunk
+				startTime = chunkEndTime.toDateTime();
+
+				// increase end time for next chunk
+				chunkEndTime = DateUtils.plus(startTime, report.getScopeType(),
+						report.getScopeCount());
+
+				if (startTime.compareTo(endTime) < 0
+						&& chunkEndTime.compareTo(endTime) > 0) {
+					// this will be our last chunk. next time around start time
+					// will = endtime
+					chunkEndTime = endTime;
+				}
+			}// end while
+		}
+	}
+    
+    private static void createReportInstance(ReportVO report) {
         LOG.info("Queuing report with id " + report.getId());
 
         // Verify that the user is not disabled.
@@ -91,7 +172,7 @@ public class ReportWorkItem implements WorkItem {
         item.reportInstance = reportInstance;
         Common.ctx.getBackgroundProcessing().addWorkItem(item);
 
-        LOG.info("Queued report with id " + report.getId() + ", instance id " + reportInstance.getId());
+        LOG.info("Queued report with id " + report.getId() + ", instance id " + reportInstance.getId());    	
     }
 
     ReportVO reportConfig;

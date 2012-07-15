@@ -170,6 +170,10 @@ public class AnalogStatistics implements StatisticsGenerator {
     public long getEnd() {
         return end;
     }
+    
+    public Object getLastValue() {
+    	return lastValue;
+    }
 
     public String getHelp() {
         return toString();
