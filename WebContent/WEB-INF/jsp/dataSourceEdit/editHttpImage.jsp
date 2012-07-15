@@ -16,10 +16,12 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see http://www.gnu.org/licenses/.
 --%>
+<%-- Errors occurred if the script type javascript was not flush with the import of datatypes.  --%>
 <%@include file="/WEB-INF/jsp/include/tech.jsp"%>
 <%@page import="com.serotonin.mango.vo.dataSource.http.HttpImagePointLocatorVO"%>
+<%@page import="com.serotonin.mango.DataTypes"%><script type="text/javascript">
 
-<script type="text/javascript">
+
   function saveDataSourceImpl() {
       DataSourceEditDwr.saveHttpImageDataSource($get("dataSourceName"), $get("dataSourceXid"), $get("updatePeriods"),
               $get("updatePeriodType"), saveDataSourceCB);
@@ -36,6 +38,11 @@
       $set("readLimit", locator.readLimit);
       $set("webcamLiveFeedCode", locator.webcamLiveFeedCode);
       
+      reportPointsArray = new Array();
+      for (var i=0; i<locator.overlayPoints.length; i++)
+          addToReportPointsArray(locator.overlayPoints[i]);        
+      writeReportPointsArray();
+
       scaleTypeChanged();
   }
   
@@ -52,6 +59,7 @@
       locator.scaleHeight = $get("scaleHeight");
       locator.readLimit = $get("readLimit");
       locator.webcamLiveFeedCode = $get("webcamLiveFeedCode");
+      locator.overlayPoints = getReportPointIdsArray();
       
       DataSourceEditDwr.saveHttpImagePointLocator(currentPoint.id, $get("xid"), $get("name"), locator, savePointCB);
   }
@@ -74,6 +82,98 @@
           show("scaleHeightRow");
       }
   }
+  
+  //  copied from reports.jsp 
+  var allPointsArray = new Array();
+  var allPointsArrayInitialized = false;
+  var reportPointsArray;
+  if (allPointsArrayInitialized == false) {
+	  DataSourceEditDwr.getAllPoints(function(response) {
+			allPointsArray = response;
+			allPointsArrayInitialized = true;
+  		})
+  }
+  function addPointToReport() {
+      var pointId = $get("allPointsList");
+      addToReportPointsArray(pointId);
+      writeReportPointsArray();
+  }
+  function addToReportPointsArray(pointId) {
+      var data = getPointData(pointId);
+      if (data) {
+          // Missing names imply that the point was deleted, so ignore.
+          reportPointsArray[reportPointsArray.length] = {
+              pointId: pointId,
+              pointName : data.name,
+              pointType : data.dataTypeMessage
+          };
+      }
+  }
+  function getPointData(pointId) {
+      for (var i=0; i<allPointsArray.length; i++) {
+          if (allPointsArray[i].id == pointId)
+              return allPointsArray[i];
+      }
+      return null;
+  }
+  function writeReportPointsArray() {
+      dwr.util.removeAllRows("reportPointsTable");
+      if (reportPointsArray.length == 0) {
+          show($("reportPointsTableEmpty"));
+          hide($("reportPointsTableHeaders"));
+      }
+      else {
+          hide($("reportPointsTableEmpty"));
+          show($("reportPointsTableHeaders"));
+          dwr.util.addRows("reportPointsTable", reportPointsArray,
+              [
+                  function(data) { return data.pointName; },
+                  function(data) { return data.pointType; },
+                  function(data) { 
+                          return "<img src='images/bullet_delete.png' class='ptr' "+
+                                  "onclick='removeFromReportPointsArray("+ data.pointId +")'/>";
+                  }
+              ],
+              {
+                  rowCreator:function(options) {
+                      var tr = document.createElement("tr");
+                      tr.className = "smRow"+ (options.rowIndex % 2 == 0 ? "" : "Alt");
+                      return tr;
+                  }
+              });
+      }
+      updatePointsList();
+  }
+  function updatePointsList() {
+      dwr.util.removeAllOptions("allPointsList");
+      var availPoints = new Array();
+      for (var i=0; i<allPointsArray.length; i++) {
+          var found = false;
+          for (var j=0; j<reportPointsArray.length; j++) {
+              if (reportPointsArray[j].pointId == allPointsArray[i].id) {
+                  found = true;
+                  break;
+              }
+          }
+          if (!found && (allPointsArray[i].dataType != <%=DataTypes.IMAGE%>))
+              availPoints[availPoints.length] = allPointsArray[i];
+      }
+      dwr.util.addOptions("allPointsList", availPoints, "id", "name");
+  }
+  function removeFromReportPointsArray(pointId) {
+      for (var i=reportPointsArray.length-1; i>=0; i--) {
+          if (reportPointsArray[i].pointId == pointId)
+              reportPointsArray.splice(i, 1);
+      }
+      writeReportPointsArray();
+  }
+  function getReportPointIdsArray() {
+      var points = new Array();
+      for (var i=0; i<reportPointsArray.length; i++)
+          points[points.length] = reportPointsArray[i].pointId;
+      return points;
+  }
+    
 </script>
 
 <c:set var="dsDesc"><fmt:message key="dsEdit.httpImage.desc"/></c:set>
@@ -145,6 +245,31 @@
     <td class="formLabelRequired"><fmt:message key="dsEdit.httpImage.readLimit"/></td>
     <td class="formField"><input id="readLimit" type="text"/></td>
   </tr>
+
+  
+ <!--  copied from reports.jsp -->  
+ <tr>
+    <td class="formLabelRequired"><fmt:message key="common.points"/></td>
+    <td class="formField">
+      <select id="allPointsList"></select>
+      <tag:img png="add" onclick="addPointToReport();" title="common.add"/>
+      
+      <table cellspacing="1">
+        <tbody id="reportPointsTableEmpty" style="display:none;">
+          <tr><th colspan="4"><fmt:message key="reports.noPoints"/></th></tr>
+        </tbody>
+        <tbody id="reportPointsTableHeaders" style="display:none;">
+          <tr class="smRowHeader">
+            <td><fmt:message key="reports.pointName"/></td>
+            <td><fmt:message key="reports.dataType"/></td>
+            <td></td>
+          </tr>
+        </tbody>
+        <tbody id="reportPointsTable"></tbody>
+      </table>
+      <span id="pointsError" class="formError"></span>
+    </td>
+  </tr>  
   
   <tr>
     <td class="formLabelRequired"><fmt:message key="dsEdit.httpImage.liveFeed"/></td>

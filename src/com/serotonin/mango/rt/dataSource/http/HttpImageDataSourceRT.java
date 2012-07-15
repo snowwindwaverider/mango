@@ -27,6 +27,9 @@ import org.apache.commons.httpclient.HttpStatus;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 
 import com.serotonin.io.StreamUtils;
 import com.serotonin.mango.Common;
@@ -38,6 +41,9 @@ import com.serotonin.mango.rt.dataImage.types.ImageValue;
 import com.serotonin.mango.rt.dataSource.DataSourceRT;
 import com.serotonin.mango.rt.dataSource.PollingDataSource;
 import com.serotonin.mango.rt.maint.work.WorkItem;
+import com.serotonin.mango.util.ImageTextOverlayer;
+import com.serotonin.mango.view.text.TextRenderer;
+import com.serotonin.mango.vo.DataPointVO;
 import com.serotonin.mango.vo.dataSource.http.HttpImageDataSourceVO;
 import com.serotonin.mango.vo.dataSource.http.HttpImagePointLocatorVO;
 import com.serotonin.util.image.BoxScaledImage;
@@ -52,6 +58,7 @@ import com.serotonin.web.i18n.LocalizableMessage;
  */
 public class HttpImageDataSourceRT extends PollingDataSource {
     static final Log LOG = LogFactory.getLog(HttpImageDataSourceRT.class);
+    private static final DateTimeFormatter dtf = DateTimeFormat.forPattern("yyyy/MM/dd HH:mm:ss");   
 
     public static final int DATA_RETRIEVAL_FAILURE_EVENT = 1;
     public static final int FILE_SAVE_EXCEPTION_EVENT = 2;
@@ -195,9 +202,49 @@ public class HttpImageDataSourceRT extends PollingDataSource {
                 return;
             }
 
+            // overlay data point values
+            
+			try {
+				if (!vo.getOverlayPoints().isEmpty()) { // text overlay exists
+
+					List<String> renderedPointValueTimes = new ArrayList<String>();
+					for (int dpId : vo.getOverlayPoints()) {
+						String pointName;
+						String pointValue;
+						String date;
+						String text;
+
+						DataPointRT dprt = Common.ctx.getRuntimeManager()
+								.getDataPoint(dpId);
+						DataPointVO dpvo = dprt.getVO();
+						PointValueTime pvt = dprt.getPointValue();
+
+						pointName = dpvo.getExtendedName();
+						pointValue = dpvo.getTextRenderer().getText(
+								pvt.getValue(), TextRenderer.HINT_FULL);
+						date = dtf.print(new DateTime(pvt.getTime()));
+
+						text = pointName + ": " + pointValue + " at " + date;
+						renderedPointValueTimes.add(text);
+					}
+					if (renderedPointValueTimes != null)
+						data = ImageTextOverlayer.overlayText(data,
+								renderedPointValueTimes,
+								ImageTextOverlayer.POSITION_BOTTOM_LEFT);
+				}
+			} catch (Exception e) {
+				saveFailure = new LocalizableMessage(
+						"event.httimpage.scalingError", e.getMessage()); // create
+																			// new
+																			// nessage
+				LOG.info("Error overlaying text", e);
+				return;
+			}          
+            
+            
             // Save the new image
             try {
-                dp.updatePointValue(new PointValueTime(new ImageValue(data, ImageValue.TYPE_JPG), time), false);
+                dp.updatePointValue(new PointValueTime(new ImageValue(data, ImageValue.TYPE_JPG, time), time), false);
             }
             catch (ImageSaveException e) {
                 saveFailure = new LocalizableMessage("event.httpImage.saveError", e.getMessage());

@@ -165,6 +165,7 @@ import com.serotonin.mango.vo.event.PointEventDetectorVO;
 import com.serotonin.mango.vo.permission.Permissions;
 import com.serotonin.mango.web.dwr.beans.BACnetDiscovery;
 import com.serotonin.mango.web.dwr.beans.BACnetObjectBean;
+import com.serotonin.mango.web.dwr.beans.DataPointBean;
 import com.serotonin.mango.web.dwr.beans.DataPointDefaulter;
 import com.serotonin.mango.web.dwr.beans.EBI25InterfaceReader;
 import com.serotonin.mango.web.dwr.beans.EBI25InterfaceUpdater;
@@ -261,6 +262,11 @@ public class DataSourceEditDwr extends DataSourceListDwr {
     public DataPointVO getPoint(int pointId) {
         return getPoint(pointId, null);
     }
+    
+    // for http image overlay 
+	public List<DataPointBean> getAllPoints() {
+		return super.getReadablePoints();
+	}   
 
     private DataPointVO getPoint(int pointId, DataPointDefaulter defaulter) {
         DataSourceVO<?> ds = Common.getUser().getEditDataSource();

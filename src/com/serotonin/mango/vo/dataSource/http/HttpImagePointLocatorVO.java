@@ -21,21 +21,26 @@ package com.serotonin.mango.vo.dataSource.http;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import com.serotonin.json.JsonArray;
 import com.serotonin.json.JsonException;
 import com.serotonin.json.JsonObject;
 import com.serotonin.json.JsonReader;
 import com.serotonin.json.JsonRemoteEntity;
 import com.serotonin.json.JsonRemoteProperty;
 import com.serotonin.json.JsonSerializable;
+import com.serotonin.json.JsonValue;
 import com.serotonin.mango.DataTypes;
+import com.serotonin.mango.db.dao.DataPointDao;
 import com.serotonin.mango.rt.dataSource.PointLocatorRT;
 import com.serotonin.mango.rt.dataSource.http.HttpImagePointLocatorRT;
 import com.serotonin.mango.rt.event.type.AuditEventType;
 import com.serotonin.mango.util.ExportCodes;
 import com.serotonin.mango.util.LocalizableJsonException;
+import com.serotonin.mango.vo.DataPointVO;
 import com.serotonin.mango.vo.dataSource.AbstractPointLocatorVO;
 import com.serotonin.util.SerializationHelper;
 import com.serotonin.util.StringUtils;
@@ -87,6 +92,8 @@ public class HttpImagePointLocatorVO extends AbstractPointLocatorVO implements J
     private int readLimit = 10000;
     @JsonRemoteProperty
     private String webcamLiveFeedCode;
+    private List<Integer> overlayPoints = new ArrayList<Integer>();
+    
 
     public String getUrl() {
         return url;
@@ -163,6 +170,20 @@ public class HttpImagePointLocatorVO extends AbstractPointLocatorVO implements J
     public int getDataTypeId() {
         return DataTypes.IMAGE;
     }
+    
+    // get, set, add to the list of data points to be over layed on the image
+    public List<Integer> getOverlayPoints() {
+    	return overlayPoints;
+    }
+
+	public void setOverlayPoints(List<Integer> overlayPoints) {
+		this.overlayPoints = overlayPoints;
+	}
+
+	public void addOverLayPoint(int dpVO) {
+		overlayPoints.add(dpVO);
+	}
+    
 
     public void validate(DwrResponseI18n response) {
         if (StringUtils.isEmpty(url))
@@ -227,7 +248,7 @@ public class HttpImagePointLocatorVO extends AbstractPointLocatorVO implements J
     // /
     //
     private static final long serialVersionUID = -1;
-    private static final int version = 1;
+    private static final int version = 102;
 
     private void writeObject(ObjectOutputStream out) throws IOException {
         out.writeInt(version);
@@ -240,9 +261,11 @@ public class HttpImagePointLocatorVO extends AbstractPointLocatorVO implements J
         out.writeInt(scaleHeight);
         out.writeInt(readLimit);
         SerializationHelper.writeSafeUTF(out, webcamLiveFeedCode);
+        out.writeObject(overlayPoints);
     }
 
-    private void readObject(ObjectInputStream in) throws IOException {
+    @SuppressWarnings("unchecked")
+	private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
         int ver = in.readInt();
 
         // Switch on the version of the class so that version changes can be elegantly handled.
@@ -256,7 +279,32 @@ public class HttpImagePointLocatorVO extends AbstractPointLocatorVO implements J
             scaleHeight = in.readInt();
             readLimit = in.readInt();
             webcamLiveFeedCode = SerializationHelper.readSafeUTF(in);
+            overlayPoints = new ArrayList<Integer>(); // had to add this here or overlayPointas is always null. not sure why it isn't initialized to empty ArrayList where it is declared.
         }
+		if (ver == 2) {
+			url = SerializationHelper.readSafeUTF(in);
+			timeoutSeconds = in.readInt();
+			retries = in.readInt();
+			scaleType = in.readInt();
+			scalePercent = in.readInt();
+			scaleWidth = in.readInt();
+			scaleHeight = in.readInt();
+			readLimit = in.readInt();
+			webcamLiveFeedCode = SerializationHelper.readSafeUTF(in);
+			overlayPoints = (List<Integer>) in.readObject();
+		}
+		if (ver == 102) {
+			url = SerializationHelper.readSafeUTF(in);
+			timeoutSeconds = in.readInt();
+			retries = in.readInt();
+			scaleType = in.readInt();
+			scalePercent = in.readInt();
+			scaleWidth = in.readInt();
+			scaleHeight = in.readInt();
+			readLimit = in.readInt();
+			webcamLiveFeedCode = SerializationHelper.readSafeUTF(in);
+			overlayPoints = (List<Integer>) in.readObject();
+		}    
     }
 
     @Override
@@ -267,10 +315,44 @@ public class HttpImagePointLocatorVO extends AbstractPointLocatorVO implements J
             if (scaleType == -1)
                 throw new LocalizableJsonException("emport.error.invalid", "scaleType", text, SCALE_TYPE_CODES);
         }
+        
+		JsonArray jsonContext = json.getJsonArray("overlayPoints");
+		if (jsonContext != null) {
+			overlayPoints.clear();
+			DataPointDao dataPointDao = new DataPointDao();
+
+			for (JsonValue jv : jsonContext.getElements()) {
+				String xid = jv.toJsonString().getValue();
+
+				if (xid == null)
+					throw new LocalizableJsonException(
+							"emport.error.meta.missing", "dataPointXid");
+
+				DataPointVO dp = dataPointDao.getDataPoint(xid);
+				if (dp == null)
+					throw new LocalizableJsonException(
+							"emport.error.missingPoint", xid);
+
+				overlayPoints.add(dp.getId());
+			}
+		}   
+        
+        
     }
 
     @Override
     public void jsonSerialize(Map<String, Object> map) {
         map.put("scaleType", SCALE_TYPE_CODES.getCode(scaleType));
+        
+		// as per metapointlocatorvo
+		DataPointDao dataPointDao = new DataPointDao();
+		List<String> pointList = new ArrayList<String>();
+		for (int dpId : overlayPoints) {
+			DataPointVO dp = dataPointDao.getDataPoint(dpId);
+			if (dp != null) {
+				pointList.add(dp.getXid());
+			}
+		}
+		map.put("overlayPoints", pointList);          
     }
 }

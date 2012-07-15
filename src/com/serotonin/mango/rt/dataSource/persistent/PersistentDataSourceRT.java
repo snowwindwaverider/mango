@@ -408,27 +408,32 @@ public class PersistentDataSourceRT extends EventDataSource implements Runnable 
                     switch (dataType) {
                     case 1:
                         value = new BinaryValue(payload.pop() != 0);
+                        time = packet.popLong();
                         break;
                     case 2:
                         value = new MultistateValue(payload.popS4B());
+                        time = packet.popLong();
                         break;
                     case 3:
                         value = new NumericValue(packet.popDouble());
+                        time = packet.popLong();
                         break;
                     case 4:
                         value = new AlphanumericValue(packet.popString());
+                        time = packet.popLong();
                         break;
                     case 5:
                         imageType = payload.popS4B();
                         imageData = new byte[payload.popS4B()];
                         payload.pop(imageData);
-                        value = new ImageValue(imageData, imageType);
+                        time = packet.popLong();
+                        value = new ImageValue(imageData, imageType, time);
                         break;
                     default:
                         throw new PersistentProtocolException("Unknown data type: " + dataType);
                     }
 
-                    time = packet.popLong();
+                    
 
                     // Save the value.
                     point.updatePointValue(new PointValueTime(value, time));

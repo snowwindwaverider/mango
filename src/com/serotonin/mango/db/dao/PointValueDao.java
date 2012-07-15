@@ -167,7 +167,18 @@ public class PointValueDao extends BaseDao {
             if (!imageValue.isSaved()) {
                 imageValue.setId(id);
 
-                File file = new File(Common.getFiledataPath(), imageValue.getFilename());
+				File directory = new File(Common.getFiledataPath() + "/"
+						+ imageValue.getDirectoryName());
+
+				// create a directory for this year if it does not exist.
+				if (!directory.exists())
+					try {
+						directory.mkdirs();
+					} catch (Exception e) {
+						throw new ImageSaveException(e);
+					}
+
+				File file = new File(directory, imageValue.getFilename());            
 
                 // Write the file.
                 FileOutputStream out = null;
@@ -370,7 +381,7 @@ public class PointValueDao extends BaseDao {
             value = new AlphanumericValue(s);
             break;
         case (DataTypes.IMAGE):
-            value = new ImageValue(Integer.parseInt(rs.getString(firstParameter + 2)), rs.getInt(firstParameter + 1));
+            value = new ImageValue(Integer.parseInt(rs.getString(firstParameter + 2)), rs.getInt(firstParameter + 1), rs.getLong(firstParameter + 4));
             break;
         default:
             value = null;
