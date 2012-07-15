@@ -29,6 +29,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.directwebremoting.WebContextFactory;
 
+import com.serotonin.db.IntValuePair;
 import com.serotonin.mango.Common;
 import com.serotonin.mango.db.dao.CompoundEventDetectorDao;
 import com.serotonin.mango.db.dao.DataPointDao;
@@ -123,6 +124,7 @@ public class EventHandlersDwr extends BaseDwr {
 
         // Get the data sources
         List<EventSourceBean> dataSources = new ArrayList<EventSourceBean>();
+        List<IntValuePair> allDataSources = new ArrayList<IntValuePair>();
         for (DataSourceVO<?> ds : new DataSourceDao().getDataSources()) {
             if (!Permissions.hasDataSourcePermission(user, ds.getId()))
                 continue;
@@ -139,6 +141,9 @@ public class EventHandlersDwr extends BaseDwr {
 
                 dataSources.add(source);
             }
+            
+            allDataSources.add(new IntValuePair(ds.getId(), ds.getName()));
+            
         }
 
         if (Permissions.hasAdmin(user)) {
@@ -197,6 +202,7 @@ public class EventHandlersDwr extends BaseDwr {
         model.put("allPoints", allPoints);
         model.put("dataPoints", dataPoints);
         model.put("dataSources", dataSources);
+        model.put("allDataSources", allDataSources);
 
         return model;
     }
@@ -261,6 +267,15 @@ public class EventHandlersDwr extends BaseDwr {
         return save(eventSourceId, eventTypeRef1, eventTypeRef2, handler, handlerId, xid, alias, disabled);
     }
 
+    public DwrResponseI18n saveUpdateDataSourceEventHandler(int eventSourceId, int eventTypeRef1, int eventTypeRef2,
+            int handlerId, String xid, String alias, boolean disabled, int dataSourceId) {
+        EventHandlerVO handler = new EventHandlerVO();
+        handler.setHandlerType(EventHandlerVO.TYPE_DATASOURCE_UPDATE);
+        handler.setDataSourceId(dataSourceId);        
+        return save(eventSourceId, eventTypeRef1, eventTypeRef2, handler, handlerId, xid, alias, disabled);
+    }    
+    
+    
     private DwrResponseI18n save(int eventSourceId, int eventTypeRef1, int eventTypeRef2, EventHandlerVO vo,
             int handlerId, String xid, String alias, boolean disabled) {
         EventTypeVO type = new EventTypeVO(eventSourceId, eventTypeRef1, eventTypeRef2);

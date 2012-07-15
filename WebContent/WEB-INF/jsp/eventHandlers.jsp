@@ -36,6 +36,7 @@
     var emailRecipients;
     var escalRecipients;
     var inactiveRecipients;
+    var allDataSources;
     
     function initCB(data) {
         <c:if test="${!empty param.ehid}">
@@ -47,6 +48,8 @@
         var pointNode, dataSourceNode, publisherNode, etNode, wid;
         
         allPoints = data.allPoints;
+        allDataSources = data.allDataSources;
+        dwr.util.addOptions("updateDataSourceId", allDataSources, "key", "value");
         
         emailRecipients = new mango.erecip.EmailRecipients("emailRecipients",
                 "<sst:i18n key="eventHandlers.recipTestEmailMessage" escapeDQuotes="true"/>",
@@ -267,6 +270,8 @@
             else if (handler.handlerType == <c:out value="<%= EventHandlerVO.TYPE_PROCESS %>"/>) {
                 $set("activeProcessCommand", handler.activeProcessCommand);
                 $set("inactiveProcessCommand", handler.inactiveProcessCommand);
+            } else if (handler.handlerType == <c:out value="<%= EventHandlerVO.TYPE_DATASOURCE_UPDATE %>"/>) {
+                $set("updateDataSourceId", handler.dataSourceId);                
             }
         }
         else {
@@ -437,6 +442,12 @@
                     selectedEventTypeNode.object.typeRef1, selectedEventTypeNode.object.typeRef2, handlerId, xid,
                     alias, disabled, $get("activeProcessCommand"), $get("inactiveProcessCommand"), saveEventHandlerCB);
         }
+        else if (handlerType == <c:out value="<%=EventHandlerVO.TYPE_DATASOURCE_UPDATE%>"/>) {
+	        var dataSourceId = $get("updateDataSourceId");
+			EventHandlersDwr.saveUpdateDataSourceEventHandler(selectedEventTypeNode.object.typeId,
+	                    selectedEventTypeNode.object.typeRef1, selectedEventTypeNode.object.typeRef2, handlerId, xid,
+	                    alias, disabled, dataSourceId, saveEventHandlerCB);		
+        }             
     }
     
     function saveEventHandlerCB(response) {
@@ -543,10 +554,12 @@
                   <option value="<c:out value="<%= EventHandlerVO.TYPE_EMAIL %>"/>"><fmt:message key="eventHandlers.type.email"/></option>
                   <option value="<c:out value="<%= EventHandlerVO.TYPE_SET_POINT %>"/>"><fmt:message key="eventHandlers.type.setPoint"/></option>
                   <option value="<c:out value="<%= EventHandlerVO.TYPE_PROCESS %>"/>"><fmt:message key="eventHandlers.type.process"/></option>
+                  <option value="<c:out value="<%= EventHandlerVO.TYPE_DATASOURCE_UPDATE %>"/>">DataSourceUpdate</option>
                 </select>
                 <tag:img id="handler1Img" png="cog_wrench" title="eventHandlers.type.setPointHandler" style="display:none;"/>
                 <tag:img id="handler2Img" png="cog_email" title="eventHandlers.type.emailHandler" style="display:none;"/>
                 <tag:img id="handler3Img" png="cog_process" title="eventHandlers.type.processHandler" style="display:none;"/>
+                <tag:img id="handler103Img" png="icon_ds_go" title="eventHandlers.type.emailHandler" style="display:none;"/>
               </td>
             </tr>
             
@@ -673,6 +686,14 @@
               </td>
             </tr>
           </table>
+
+           <table id="handler<c:out value="<%= EventHandlerVO.TYPE_DATASOURCE_UPDATE %>"/>" style="display:none" width="100%">
+           <tr>
+           	<td>
+           	<select id="updateDataSourceId"></select>
+           	</td>
+           </tr>
+           </table>
           
           <table>
             <tbody id="genericMessages"></tbody>
