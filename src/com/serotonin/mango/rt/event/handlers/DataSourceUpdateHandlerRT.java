@@ -33,7 +33,7 @@ public class DataSourceUpdateHandlerRT extends EventHandlerRT {
 			// polling data source implements interface timeout client. we can make a timeout job with it
 			PollingDataSource pds = (PollingDataSource)dsrt;
 			
-			OneTimeTrigger oneTimeTrigger = new OneTimeTrigger(System.currentTimeMillis() + 1000);
+			OneTimeTrigger oneTimeTrigger = new OneTimeTrigger(1000);
 			TimeoutTask timeoutTask = new TimeoutTask(oneTimeTrigger, pds);
 			
 		} 

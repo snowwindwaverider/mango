@@ -736,6 +736,7 @@ public class EventHandlerVO implements Serializable, ChangeComparable<EventHandl
 			
 		}  else if (ver == 104) {
 			handlerType = in.readInt();
+			disabled = in.readBoolean();
 			if (handlerType == TYPE_SET_POINT) {
 				targetPointId = in.readInt();
 				activeAction = in.readInt();

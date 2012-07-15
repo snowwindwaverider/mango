@@ -445,8 +445,8 @@
         else if (handlerType == <c:out value="<%=EventHandlerVO.TYPE_DATASOURCE_UPDATE%>"/>) {
 	        var dataSourceId = $get("updateDataSourceId");
 			EventHandlersDwr.saveUpdateDataSourceEventHandler(selectedEventTypeNode.object.typeId,
-	                    selectedEventTypeNode.object.typeRef1, selectedEventTypeNode.object.typeRef2, handlerId,
-	                    alias, dataSourceId, saveEventHandlerCB);
+	                    selectedEventTypeNode.object.typeRef1, selectedEventTypeNode.object.typeRef2, handlerId, xid,
+	                    alias, disabled, dataSourceId, saveEventHandlerCB);		
         }             
     }
     
