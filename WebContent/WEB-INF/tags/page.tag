@@ -91,9 +91,6 @@
     <td width="10%"><img src="images/mangoLogoMed.jpg" alt="Logo"/></td>
     <c:if test="${!simple}">
       <td width=15% align="left">
-    <c:if test="${!empty instanceDescription}">
-      <span class="smallTitle" style="padding:5px; white-space: nowrap;">${instanceDescription}</span><br/>
-    </c:if>
         <a href="events.shtm">
           <span id="__header__alarmLevelDiv" style="display:none;">
             <img id="__header__alarmLevelImg" src="images/spacer.gif" alt="" border="0" title=""/>

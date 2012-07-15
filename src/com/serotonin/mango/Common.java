@@ -87,7 +87,7 @@ public class Common {
      * correct version.
      */
     public static final String getVersion() {
-        return "1.12.4";
+        return "1.12.4-nze1";
     }
 
     public interface ContextKeys {
