@@ -40,6 +40,7 @@ import com.serotonin.mango.db.dao.DataPointDao;
 import com.serotonin.mango.db.dao.EventDao;
 import com.serotonin.mango.db.dao.MailingListDao;
 import com.serotonin.mango.db.dao.UserDao;
+import com.serotonin.mango.rt.event.handlers.DataSourceUpdateHandlerRT;
 import com.serotonin.mango.rt.event.handlers.EmailHandlerRT;
 import com.serotonin.mango.rt.event.handlers.EventHandlerRT;
 import com.serotonin.mango.rt.event.handlers.ProcessHandlerRT;
@@ -63,6 +64,7 @@ public class EventHandlerVO implements Serializable, ChangeComparable<EventHandl
     public static final int TYPE_SET_POINT = 1;
     public static final int TYPE_EMAIL = 2;
     public static final int TYPE_PROCESS = 3;
+    public static final int TYPE_DATASOURCE_UPDATE=103;
 
     public static ExportCodes TYPE_CODES = new ExportCodes();
     static {
@@ -125,6 +127,9 @@ public class EventHandlerVO implements Serializable, ChangeComparable<EventHandl
     // Process handler fields.
     private String activeProcessCommand;
     private String inactiveProcessCommand;
+    
+    // data source update fields
+    private int dataSourceId;
 
     public EventHandlerRT createRuntime() {
         switch (handlerType) {
@@ -134,6 +139,8 @@ public class EventHandlerVO implements Serializable, ChangeComparable<EventHandl
             return new EmailHandlerRT(this);
         case TYPE_PROCESS:
             return new ProcessHandlerRT(this);
+        case TYPE_DATASOURCE_UPDATE:
+        	return new DataSourceUpdateHandlerRT(this);
         }
         throw new ShouldNeverHappenException("Unknown handler type: " + handlerType);
     }
@@ -164,6 +171,8 @@ public class EventHandlerVO implements Serializable, ChangeComparable<EventHandl
             return new LocalizableMessage("eventHandlers.type.email");
         case TYPE_PROCESS:
             return new LocalizableMessage("eventHandlers.type.process");
+		case TYPE_DATASOURCE_UPDATE:
+			return new LocalizableMessage("eventHandlers.type.dataSourceUpdate");            
         }
         return new LocalizableMessage("common.unknown");
     }
@@ -348,6 +357,14 @@ public class EventHandlerVO implements Serializable, ChangeComparable<EventHandl
         return "event.audit.eventHandler";
     }
 
+	public int getDataSourceId() {
+		return dataSourceId;
+	}
+
+	public void setDataSourceId(int dataSourceId) {
+		this.dataSourceId = dataSourceId;
+	}
+    
     public void validate(DwrResponseI18n response) {
         if (handlerType == TYPE_SET_POINT) {
             DataPointVO dp = new DataPointDao().getDataPoint(targetPointId);
@@ -436,6 +453,8 @@ public class EventHandlerVO implements Serializable, ChangeComparable<EventHandl
         else if (handlerType == TYPE_PROCESS) {
             if (StringUtils.isEmpty(activeProcessCommand) && StringUtils.isEmpty(inactiveProcessCommand))
                 response.addGenericMessage("eventHandlers.invalidCommands");
+        } else if (handlerType == TYPE_DATASOURCE_UPDATE) {
+        	// no-op
         }
     }
 
@@ -485,7 +504,9 @@ public class EventHandlerVO implements Serializable, ChangeComparable<EventHandl
         else if (handlerType == TYPE_PROCESS) {
             AuditEventType.addPropertyMessage(list, "eventHandlers.activeCommand", activeProcessCommand);
             AuditEventType.addPropertyMessage(list, "eventHandlers.inactiveCommand", inactiveProcessCommand);
-        }
+		} else if (handlerType == TYPE_DATASOURCE_UPDATE) {
+			AuditEventType.addPropertyMessage(list,"data source id", dataSourceId);
+		}
     }
 
     @Override
@@ -535,7 +556,10 @@ public class EventHandlerVO implements Serializable, ChangeComparable<EventHandl
                     from.activeProcessCommand, activeProcessCommand);
             AuditEventType.maybeAddPropertyChangeMessage(list, "eventHandlers.inactiveCommand",
                     from.inactiveProcessCommand, inactiveProcessCommand);
-        }
+		} else if (handlerType == TYPE_DATASOURCE_UPDATE) {
+			AuditEventType.maybeAddPropertyChangeMessage(list,"data source id", 
+					from.dataSourceId, dataSourceId);
+		}
     }
 
     private static LocalizableMessage createRecipientMessage(List<RecipientListEntryBean> recipients) {
@@ -564,7 +588,7 @@ public class EventHandlerVO implements Serializable, ChangeComparable<EventHandl
     // /
     //
     private static final long serialVersionUID = -1;
-    private static final int version = 3;
+    private static final int version = 104;
 
     private void writeObject(ObjectOutputStream out) throws IOException {
         out.writeInt(version);
@@ -592,6 +616,9 @@ public class EventHandlerVO implements Serializable, ChangeComparable<EventHandl
         else if (handlerType == TYPE_PROCESS) {
             SerializationHelper.writeSafeUTF(out, activeProcessCommand);
             SerializationHelper.writeSafeUTF(out, inactiveProcessCommand);
+        }
+        else if (handlerType == TYPE_DATASOURCE_UPDATE) {
+        	out.writeInt(dataSourceId);
         }
     }
 
@@ -679,8 +706,60 @@ public class EventHandlerVO implements Serializable, ChangeComparable<EventHandl
             else if (handlerType == TYPE_PROCESS) {
                 activeProcessCommand = SerializationHelper.readSafeUTF(in);
                 inactiveProcessCommand = SerializationHelper.readSafeUTF(in);
-            }
-        }
+            } 
+            
+		} else if (ver == 103) {
+			handlerType = in.readInt();
+			if (handlerType == TYPE_SET_POINT) {
+				targetPointId = in.readInt();
+				activeAction = in.readInt();
+				activeValueToSet = SerializationHelper.readSafeUTF(in);
+				activePointId = in.readInt();
+				inactiveAction = in.readInt();
+				inactiveValueToSet = SerializationHelper.readSafeUTF(in);
+				inactivePointId = in.readInt();
+			} else if (handlerType == TYPE_EMAIL) {
+				activeRecipients = (List<RecipientListEntryBean>) in.readObject();
+				sendEscalation = in.readBoolean();
+				escalationDelayType = in.readInt();
+				escalationDelay = in.readInt();
+				escalationRecipients = (List<RecipientListEntryBean>) in.readObject();
+				sendInactive = in.readBoolean();
+                inactiveOverride = false;
+                inactiveRecipients = new ArrayList<RecipientListEntryBean>();				
+			} else if (handlerType == TYPE_DATASOURCE_UPDATE){
+				dataSourceId = in.readInt();
+			} else if (handlerType == TYPE_PROCESS) {
+                activeProcessCommand = SerializationHelper.readSafeUTF(in);
+                inactiveProcessCommand = SerializationHelper.readSafeUTF(in);
+            } 
+			
+		}  else if (ver == 104) {
+			handlerType = in.readInt();
+			if (handlerType == TYPE_SET_POINT) {
+				targetPointId = in.readInt();
+				activeAction = in.readInt();
+				activeValueToSet = SerializationHelper.readSafeUTF(in);
+				activePointId = in.readInt();
+				inactiveAction = in.readInt();
+				inactiveValueToSet = SerializationHelper.readSafeUTF(in);
+				inactivePointId = in.readInt();
+			} else if (handlerType == TYPE_EMAIL) {
+				activeRecipients = (List<RecipientListEntryBean>) in.readObject();
+				sendEscalation = in.readBoolean();
+				escalationDelayType = in.readInt();
+				escalationDelay = in.readInt();
+				escalationRecipients = (List<RecipientListEntryBean>) in.readObject();
+				sendInactive = in.readBoolean();
+                inactiveOverride = false;
+                inactiveRecipients = new ArrayList<RecipientListEntryBean>();				
+			} else if (handlerType == TYPE_DATASOURCE_UPDATE){
+				dataSourceId = in.readInt();
+			} else if (handlerType == TYPE_PROCESS) {
+                activeProcessCommand = SerializationHelper.readSafeUTF(in);
+                inactiveProcessCommand = SerializationHelper.readSafeUTF(in);
+            } 
+		}
     }
 
     public void jsonSerialize(Map<String, Object> map) {
