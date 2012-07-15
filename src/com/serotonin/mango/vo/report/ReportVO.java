@@ -55,7 +55,11 @@ public class ReportVO implements Serializable {
     private String name;
     private List<ReportPointVO> points = new ArrayList<ReportPointVO>();
     private int includeEvents = EVENTS_ALARMS;
-    private boolean includeUserComments = true;
+	// change type of variable with same name from patch to serotonin implementation,
+	// have to rename the serotonin variable going forwards to de-serialize
+	// existing object successfully
+	private boolean includeUserCommentsBool = true;
+	private int includeUserComments = 1;
     private int dateRangeType = DATE_RANGE_TYPE_RELATIVE;
     private int relativeDateType = RELATIVE_DATE_TYPE_PREVIOUS;
 
@@ -149,11 +153,11 @@ public class ReportVO implements Serializable {
     }
 
     public boolean isIncludeUserComments() {
-        return includeUserComments;
+        return includeUserCommentsBool;
     }
 
     public void setIncludeUserComments(boolean includeUserComments) {
-        this.includeUserComments = includeUserComments;
+        this.includeUserCommentsBool = includeUserComments;
     }
 
     public int getDateRangeType() {
@@ -392,7 +396,7 @@ public class ReportVO implements Serializable {
 
         out.writeObject(points);
         out.writeInt(includeEvents);
-        out.writeBoolean(includeUserComments);
+        out.writeBoolean(includeUserCommentsBool);
         out.writeInt(dateRangeType);
         out.writeInt(relativeDateType);
 
@@ -434,7 +438,7 @@ public class ReportVO implements Serializable {
         if (ver == 1) {
             points = convertToReportPointVOs((List<Integer>) in.readObject());
             includeEvents = EVENTS_ALARMS;
-            includeUserComments = true;
+            includeUserCommentsBool = true;
             dateRangeType = in.readInt();
             relativeDateType = in.readInt();
 
@@ -468,7 +472,7 @@ public class ReportVO implements Serializable {
         else if (ver == 2) {
             points = convertToReportPointVOs((List<Integer>) in.readObject());
             includeEvents = EVENTS_ALARMS;
-            includeUserComments = true;
+            includeUserCommentsBool = true;
             dateRangeType = in.readInt();
             relativeDateType = in.readInt();
 
@@ -502,7 +506,7 @@ public class ReportVO implements Serializable {
         else if (ver == 3) {
             points = convertToReportPointVOs((List<Integer>) in.readObject());
             includeEvents = in.readInt();
-            includeUserComments = true;
+            includeUserCommentsBool = true;
             dateRangeType = in.readInt();
             relativeDateType = in.readInt();
 
@@ -536,7 +540,7 @@ public class ReportVO implements Serializable {
         else if (ver == 4) {
             points = convertToReportPointVOs((List<Integer>) in.readObject());
             includeEvents = in.readInt();
-            includeUserComments = in.readBoolean();
+            includeUserCommentsBool = in.readBoolean();
             dateRangeType = in.readInt();
             relativeDateType = in.readInt();
 
@@ -570,7 +574,7 @@ public class ReportVO implements Serializable {
         else if (ver == 5) {
             points = (List<ReportPointVO>) in.readObject();
             includeEvents = in.readInt();
-            includeUserComments = in.readBoolean();
+            includeUserCommentsBool = in.readBoolean();
             dateRangeType = in.readInt();
             relativeDateType = in.readInt();
 
@@ -604,7 +608,7 @@ public class ReportVO implements Serializable {
         else if (ver == 6) {
             points = (List<ReportPointVO>) in.readObject();
             includeEvents = in.readInt();
-            includeUserComments = in.readBoolean();
+            includeUserCommentsBool = in.readBoolean();
             dateRangeType = in.readInt();
             relativeDateType = in.readInt();
 
@@ -638,9 +642,9 @@ public class ReportVO implements Serializable {
 			points = convertToReportPointVOs((List<Integer>) in.readObject());
 			includeEvents = in.readInt();
 			if (in.readInt() > 1) {
-				includeUserComments = true;
+				includeUserCommentsBool = true;
 			} else {
-				includeUserComments = false;
+				includeUserCommentsBool = false;
 			}
 			dateRangeType = in.readInt();
 			relativeDateType = in.readInt();
@@ -675,7 +679,7 @@ public class ReportVO implements Serializable {
 		} else if (ver == 106) {
 	        points = (List<ReportPointVO>) in.readObject();
 	        includeEvents = in.readInt();
-	        includeUserComments = in.readBoolean();
+	        includeUserCommentsBool = in.readBoolean();
 	        dateRangeType = in.readInt();
 	        relativeDateType = in.readInt();
 	
