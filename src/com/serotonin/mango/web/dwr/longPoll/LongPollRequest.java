@@ -34,6 +34,8 @@ public class LongPollRequest implements Serializable {
     private boolean pointDetails;
     private boolean pendingAlarms;
     private boolean customView;
+    private boolean chats;
+
 
     private int anonViewId;
 
@@ -108,4 +110,13 @@ public class LongPollRequest implements Serializable {
     public void setCustomView(boolean customView) {
         this.customView = customView;
     }
+    
+	public boolean isChats() {
+		return chats;
+	}
+
+	public void setChats(boolean chats) {
+		this.chats = chats;
+	}
+ 
 }

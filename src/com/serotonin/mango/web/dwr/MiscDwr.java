@@ -44,6 +44,7 @@ import org.springframework.web.servlet.i18n.SessionLocaleResolver;
 
 import com.serotonin.io.StreamUtils;
 import com.serotonin.mango.Common;
+import com.serotonin.mango.db.dao.ChatDao;
 import com.serotonin.mango.db.dao.EventDao;
 import com.serotonin.mango.db.dao.MailingListDao;
 import com.serotonin.mango.db.dao.SystemSettingsDao;
@@ -55,6 +56,7 @@ import com.serotonin.mango.util.DocumentationItem;
 import com.serotonin.mango.util.DocumentationManifest;
 import com.serotonin.mango.vo.DataPointVO;
 import com.serotonin.mango.vo.User;
+import com.serotonin.mango.vo.UserComment;
 import com.serotonin.mango.vo.WatchList;
 import com.serotonin.mango.web.dwr.beans.CustomComponentState;
 import com.serotonin.mango.web.dwr.beans.RecipientListEntryBean;
@@ -285,6 +287,7 @@ public class MiscDwr extends BaseDwr {
         User user = Common.getUser(httpRequest);
         EventManager eventManager = Common.ctx.getEventManager();
         EventDao eventDao = new EventDao();
+        ChatDao chatDao = new ChatDao();
 
         LongPollData data = getLongPollData(pollSessionId, false);
         data.updateTimestamp();
@@ -420,7 +423,31 @@ public class MiscDwr extends BaseDwr {
                     state.setPendingAlarmsContent(currentContent);
                 }
             }
+			if (pollRequest.isChats()) {
+				// add new chat messages to the request response.
+				long stateChatTs = state.getLastChat();
+				long latestChatTs;
 
+				List<UserComment> latestChat = chatDao.getLastChat();
+				if (latestChat.size() > 0)
+					latestChatTs = latestChat.get(0).getTs();
+				else
+					latestChatTs = 0;
+
+				if (latestChatTs > stateChatTs) {
+					List<UserComment> chatContent;
+					if (stateChatTs == 0) {
+						// new page view, load 15 most recent chats
+						chatContent = chatDao.getLatestChats(0, 15);
+					} else {
+						chatContent = chatDao.getLatestChats(stateChatTs);
+					}
+
+					response.put("chatContent", chatContent);
+					state.setLastChat(latestChatTs);
+				}
+
+			}
             if (!response.isEmpty())
                 break;
 
