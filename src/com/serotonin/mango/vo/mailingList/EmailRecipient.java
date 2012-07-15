@@ -49,6 +49,10 @@ abstract public class EmailRecipient implements JsonSerializable {
 
     abstract public void appendAllAddresses(Set<String> addresses);
 
+    abstract public void appendPhoneNumbers(Set<String> numbers, DateTime sendTime);
+
+    abstract public void  appendAllPhoneNumbers(Set<String> numbers);
+    
     abstract public int getReferenceId();
 
     abstract public String getReferenceAddress();

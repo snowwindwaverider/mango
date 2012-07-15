@@ -99,6 +99,11 @@
             <img id="__header__alarmLevelImg" src="images/spacer.gif" alt="" border="0" title=""/>
             <span id="__header__alarmLevelText"></span>
           </span>
+		<c:if test="${!empty sessionUser}"><br/>                
+	        <span id="__header__alarmsSuppressedDiv">
+	        Alarms Suppressed<input id="headerAlarmsSuppressed" type=checkbox onclick='__header__alarmsSuppressed();'/>
+	        </span>
+	    </c:if>                  
         </a>
       </td>
     </c:if>

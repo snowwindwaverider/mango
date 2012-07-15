@@ -133,6 +133,19 @@ public class MailingListDao extends BaseDao {
         }
     }
 
+    public Set<String> getRecipientPhoneNumbers(List<RecipientListEntryBean> beans, DateTime sendTime) {
+
+    	Set<String> numbers = new HashSet<String>();
+    	List<EmailRecipient> entries = new ArrayList<EmailRecipient>(beans.size());
+    	for (RecipientListEntryBean bean : beans)
+    		entries.add(bean.createEmailRecipient());
+    	populateEntrySubclasses(entries);
+    	for (EmailRecipient entry : entries)
+    		entry.appendPhoneNumbers(numbers, sendTime);      
+    	return numbers;
+
+    }
+    
     public Set<String> getRecipientAddresses(List<RecipientListEntryBean> beans, DateTime sendTime) {
         List<EmailRecipient> entries = new ArrayList<EmailRecipient>(beans.size());
         for (RecipientListEntryBean bean : beans)

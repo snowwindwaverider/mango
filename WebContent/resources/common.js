@@ -55,8 +55,13 @@ mango.longPoll = {};
 mango.longPoll.pollRequest = {};
 mango.longPoll.pollSessionId = Math.round(Math.random() * 1000000000);
 
+
 // tell the long poll we are interested in new chat messages
 mango.longPoll.pollRequest.chats = true;
+
+
+// signs us up to be notified about changes in Inhibit Alarms setting.
+mango.longPoll.pollRequest.inhibitEmailEventHandlers = true;
 
 
 mango.longPoll.start = function() {
@@ -67,6 +72,10 @@ mango.longPoll.start = function() {
 mango.longPoll.poll = function() {
     mango.longPoll.lastPoll = new Date().getTime();
     MiscDwr.doLongPoll(mango.longPoll.pollSessionId, mango.longPoll.pollCB);
+}
+
+function __header__alarmsSuppressed() {
+	MiscDwr.inhibitEmailHandler(true);
 }
 
 mango.longPoll.pollCB = function(response) {
@@ -107,6 +116,11 @@ mango.longPoll.pollCB = function(response) {
     // process new chat messages
     if (response.chatContent) 
      	appendChatContent(response.chatContent);
+    
+    if (response.inhibitEmailEventHandlers == true || 
+    	response.inhibitEmailEventHandlers == false) {
+    	$set("headerAlarmsSuppressed", response.inhibitEmailEventHandlers);
+    }
     
     if (mango.longPoll.lastPoll) {
         var duration = new Date().getTime() - mango.longPoll.lastPoll;

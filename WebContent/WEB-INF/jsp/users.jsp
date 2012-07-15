@@ -189,6 +189,20 @@
         });
         startImageFader($("sendTestEmailImg"));
     }
+
+    function sendTestSms(message) {
+        UsersDwr.sendTestSms($get("phone"), $get("username"),message, sendTestSmsCB);
+        startImageFader($("sendTestSmsImg"));
+    }
+    
+    function sendTestSmsCB(result) {
+		stopImageFader($("sendTestSmsImg"));
+		closeMessageDialog();
+		if (result.exception)
+			setUserMessage(result.exception);
+		else 
+			setUserMessage("test sms sent to " + result.phone);
+    }    
     
     function setUserMessage(message) {
         if (message)
@@ -242,8 +256,66 @@
             });
         }
     }
+    dojo.require("dojo.widget.Dialog");
+
+    
+
+    var messageType;
+    function openMessageDialog(type) {
+        messageType = type;
+        $set("messageText", "");
+        dojo.widget.byId("MessageDialog").show();
+        $("messageText").focus();
+    }    
+
+
+
+    function saveMessage() {
+        var message = $get("messageText");
+        if (messageType == 1) {
+            sendTestSms(message);
+        } 
+
+        if (messageType ==2) {
+            sendTestEmail(message);
+        }
+    }
+    
+    function closeMessageDialog() {
+        dojo.widget.byId("MessageDialog").hide();
+    }       
   </script>
-  
+
+<style type="text/css">
+  .dojoDialog {
+      background : #eee;
+      border : 1px solid #999;
+      -moz-border-radius : 5px;
+      padding : 4px;
+  }
+  #eventsTable .row td {
+      vertical-align: top;
+  }
+  #eventsTable .rowAlt td {
+      vertical-align: top;
+  }
+</style>
+
+<div dojoType="dialog" id="MessageDialog" bgColor="white" bgOpacity="0.5" toggle="fade" toggleDuration="250">
+  <span class="smallTitle"><fmt:message key="user.sms.enterMessage"/></span>
+   <table>
+     <tr>
+      <td><textarea rows="8" cols="50" id="messageText"></textarea></td>
+    </tr>
+    <tr>
+      <td align="center">
+        <input type="button" value="<fmt:message key="user.sms.send"/>" onclick="saveMessage();"/>
+        <input type="button" value="<fmt:message key="notes.cancel"/>" onclick="closeMessageDialog();"/>
+      </td>
+    </tr>
+  </table>
+</div>
+
   <table>
     <tr>
       <td valign="top" id="userList" style="display:none;">
@@ -280,6 +352,7 @@
                 <tag:img id="deleteImg" png="delete" onclick="deleteUser();" title="common.delete" style="display:none;"/>
                 <tag:img id="sendTestEmailImg" png="email_go" onclick="sendTestEmail();" title="common.sendTestEmail"
                         style="display:none;"/>
+				<tag:img id="sendTestSmsImg" png="transmit_go" onclick="openMessageDialog(1);" />                        
               </td>
             </tr>
           </table>

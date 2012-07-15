@@ -29,6 +29,7 @@ import com.serotonin.InvalidArgumentException;
 import com.serotonin.ShouldNeverHappenException;
 import com.serotonin.db.spring.ExtendedJdbcTemplate;
 import com.serotonin.mango.Common;
+import com.serotonin.mango.rt.event.AlarmLevels;
 import com.serotonin.util.ColorUtils;
 
 public class SystemSettingsDao extends BaseDao {
@@ -48,6 +49,13 @@ public class SystemSettingsDao extends BaseDao {
     public static final String EMAIL_SMTP_PASSWORD = "emailSmtpPassword";
     public static final String EMAIL_TLS = "emailTls";
     public static final String EMAIL_CONTENT_TYPE = "emailContentType";
+    
+    // SMS settings
+    public static final String SMS_USERNAME = "smsUsername";
+    public static final String SMS_PASSWORD = "smsPassword";
+    public static final String SMS_ALARM_LEVEL = "smsAlarmLevel";
+    public static final String INSTANCE_NAME = "instanceName";
+    public static final String EMAIL_EVENT_HANDLERS_DISABLED = "emailEventsEnabled";    
 
     // Event purging
     public static final String EVENT_PURGE_PERIOD_TYPE = "eventPurgePeriodType";
@@ -224,6 +232,10 @@ public class SystemSettingsDao extends BaseDao {
         DEFAULT_VALUES.put(EMAIL_SMTP_PASSWORD, "");
         DEFAULT_VALUES.put(EMAIL_FROM_NAME, "Mango M2M");
 
+        DEFAULT_VALUES.put(SMS_USERNAME, "");
+        DEFAULT_VALUES.put(SMS_PASSWORD, "");
+        DEFAULT_VALUES.put(SMS_ALARM_LEVEL, AlarmLevels.CRITICAL);
+        
         DEFAULT_VALUES.put(EVENT_PURGE_PERIOD_TYPE, Common.TimePeriods.YEARS);
         DEFAULT_VALUES.put(EVENT_PURGE_PERIODS, 1);
 

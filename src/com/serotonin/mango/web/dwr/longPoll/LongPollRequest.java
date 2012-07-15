@@ -36,6 +36,7 @@ public class LongPollRequest implements Serializable {
     private boolean customView;
     private boolean chats;
 
+    private boolean inhibitEmailEventHandlers;
 
     private int anonViewId;
 
@@ -119,4 +120,11 @@ public class LongPollRequest implements Serializable {
 		this.chats = chats;
 	}
  
+    public boolean isInhibitEmailEventHandlers() {
+    	return inhibitEmailEventHandlers;
+    }
+    
+    public void setInhibitEmailEventHandlers(boolean inhibitEmailEventHandlers) {
+    	this.inhibitEmailEventHandlers = inhibitEmailEventHandlers;
+    }    
 }

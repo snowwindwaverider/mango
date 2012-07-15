@@ -76,7 +76,8 @@ public class EmailHandlerRT extends EventHandlerRT implements ModelTimeoutClient
      * The list of all of the recipients - active and escalation - for sending upon inactive if configured to do so.
      */
     private Set<String> inactiveRecipients;
-
+    private Set<String> inactivePhoneNumbers;
+    
     public EmailHandlerRT(EventHandlerVO vo) {
         this.vo = vo;
     }
@@ -94,13 +95,21 @@ public class EmailHandlerRT extends EventHandlerRT implements ModelTimeoutClient
         // Send an email to the active recipients.
         sendEmail(evt, NotificationType.ACTIVE, activeRecipients);
 
+        Set<String> phoneNumbers = new MailingListDao().getRecipientPhoneNumbers(vo.getActiveRecipients(), 
+        		new DateTime(evt.getActiveTimestamp()));
+        sendSms("smsActive.ftl", evt, phoneNumbers);
+        
         // If an inactive notification is to be sent, save the active recipients.
         if (vo.isSendInactive()) {
-            if (vo.isInactiveOverride())
+            if (vo.isInactiveOverride()) {
                 inactiveRecipients = new MailingListDao().getRecipientAddresses(vo.getInactiveRecipients(),
                         new DateTime(evt.getActiveTimestamp()));
-            else
+            	inactivePhoneNumbers = new MailingListDao().getRecipientPhoneNumbers(vo.getActiveRecipients(), 
+            		new DateTime(evt.getActiveTimestamp()));
+            } else {
                 inactiveRecipients = activeRecipients;
+            	inactivePhoneNumbers = phoneNumbers;
+            }
         }
 
         // If an escalation is to be sent, set up timeout to trigger it.
@@ -121,10 +130,16 @@ public class EmailHandlerRT extends EventHandlerRT implements ModelTimeoutClient
         // Send the escalation.
         sendEmail(evt, NotificationType.ESCALATION, addresses);
 
+        Set<String> phoneNumbers = new MailingListDao().getRecipientPhoneNumbers(vo.getEscalationRecipients(), 
+        		new DateTime(fireTime));
+        sendSms("SmsEscalation.ftl", evt, phoneNumbers);         
+        
         // If an inactive notification is to be sent, save the escalation recipients, but only if inactive recipients
         // have not been overridden.
-        if (vo.isSendInactive() && !vo.isInactiveOverride())
+        if (vo.isSendInactive() && !vo.isInactiveOverride()) {
             inactiveRecipients.addAll(addresses);
+            inactivePhoneNumbers.addAll(phoneNumbers);
+        }
     }
 
     @Override
@@ -133,9 +148,13 @@ public class EmailHandlerRT extends EventHandlerRT implements ModelTimeoutClient
         if (escalationTask != null)
             escalationTask.cancel();
 
-        if (inactiveRecipients != null && inactiveRecipients.size() > 0)
+        if (inactiveRecipients != null && inactiveRecipients.size() > 0) {
             // Send an email to the inactive recipients.
             sendEmail(evt, NotificationType.INACTIVE, inactiveRecipients);
+            sendSms("smsInactive.ftl", evt, inactivePhoneNumbers);
+        }
+        
+       
     }
 
     public static void sendActiveEmail(EventInstance evt, Set<String> addresses) {
@@ -199,4 +218,24 @@ public class EmailHandlerRT extends EventHandlerRT implements ModelTimeoutClient
             LOG.error("", e);
         }
     }
+    
+    private void sendSms(String tplFile, EventInstance evt, Set<String> phoneNumbers) {
+    	
+    	// any sms to send?
+    	if (phoneNumbers == null) { return;}
+    	
+    	SystemSettingsDao systemSettingsDao = new SystemSettingsDao();
+
+    	// don't send SMS for alarms that are not high priority, according to user system preference
+    	if (evt.getAlarmLevel() < systemSettingsDao.getIntValue(SystemSettingsDao.SMS_ALARM_LEVEL))
+    			return;
+
+    	// don't schedule to send any SMS if Alarms are suppressed
+       	if (systemSettingsDao.getBooleanValue(SystemSettingsDao.EMAIL_EVENT_HANDLERS_DISABLED))
+    		return;    	
+
+        for (String number : phoneNumbers) {
+        	SmsJob.scheduleSmsJob(number, tplFile, evt);
+        }
+    }     
 }

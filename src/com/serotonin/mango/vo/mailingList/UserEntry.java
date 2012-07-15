@@ -80,6 +80,17 @@ public class UserEntry extends EmailRecipient {
             addresses.add(user.getEmail());
     }
 
+    public void appendPhoneNumbers(Set<String> numbers, DateTime sendTime) {
+    	appendAllPhoneNumbers(numbers);
+    }    
+
+    public void appendAllPhoneNumbers(Set<String> numbers) {
+        if (user == null)
+            return;
+        if (!user.isDisabled())
+        	numbers.add(user.getPhone());
+    }    
+    
     @Override
     public String toString() {
         if (user == null)

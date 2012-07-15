@@ -82,6 +82,21 @@ public class MiscDwr extends BaseDwr {
     private final ViewDwr viewDwr = new ViewDwr();
     private final CustomViewDwr customViewDwr = new CustomViewDwr();
 
+    public boolean inhibitEmailHandler(boolean toggleSuppressAlarms) {
+        SystemSettingsDao systemSettingsDao = new SystemSettingsDao();
+        User user = Common.getUser();
+
+        boolean alarmsSuppressed = systemSettingsDao.getBooleanValue(SystemSettingsDao.EMAIL_EVENT_HANDLERS_DISABLED);
+        if (toggleSuppressAlarms  && user != null) {
+        	alarmsSuppressed = !alarmsSuppressed;
+        	systemSettingsDao.setBooleanValue(SystemSettingsDao.EMAIL_EVENT_HANDLERS_DISABLED, alarmsSuppressed);        	
+        }
+        return alarmsSuppressed;
+
+	}     
+    
+    
+    @MethodFilter
     public DwrResponseI18n toggleSilence(int eventId) {
         DwrResponseI18n response = new DwrResponseI18n();
         response.addData("eventId", eventId);
@@ -423,6 +438,7 @@ public class MiscDwr extends BaseDwr {
                     state.setPendingAlarmsContent(currentContent);
                 }
             }
+
 			if (pollRequest.isChats()) {
 				// add new chat messages to the request response.
 				long stateChatTs = state.getLastChat();
@@ -448,6 +464,18 @@ public class MiscDwr extends BaseDwr {
 				}
 
 			}
+
+            if (pollRequest.isInhibitEmailEventHandlers()) {
+            	// if this has changed, send the new state
+            	SystemSettingsDao systemSettingsDao = new SystemSettingsDao();
+            	boolean inhibitEmailEventHandlers = systemSettingsDao.getBooleanValue(SystemSettingsDao.EMAIL_EVENT_HANDLERS_DISABLED);
+            	if (state.getInhibitEmailEventHandlers() != inhibitEmailEventHandlers) {
+            		// state has changed.
+            		response.put("inhibitEmailEventHandlers", inhibitEmailEventHandlers);
+            		state.setInhibitEmailEventHandlers(inhibitEmailEventHandlers);
+            	}           	
+            }            
+
             if (!response.isEmpty())
                 break;
 

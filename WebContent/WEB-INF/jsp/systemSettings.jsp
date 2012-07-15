@@ -40,6 +40,13 @@
             $set("<c:out value="<%= SystemSettingsDao.EMAIL_TLS %>"/>", settings.<c:out value="<%= SystemSettingsDao.EMAIL_TLS %>"/>);
             $set("<c:out value="<%= SystemSettingsDao.EMAIL_CONTENT_TYPE %>"/>", settings.<c:out value="<%= SystemSettingsDao.EMAIL_CONTENT_TYPE %>"/>);
             smtpAuthChange();
+
+            $set("<c:out value="<%= SystemSettingsDao.INSTANCE_NAME %>"/>", settings.<c:out value="<%= SystemSettingsDao.INSTANCE_NAME %>"/>);
+            $set("<c:out value="<%= SystemSettingsDao.EMAIL_EVENT_HANDLERS_DISABLED %>"/>", settings.<c:out value="<%= SystemSettingsDao.EMAIL_EVENT_HANDLERS_DISABLED %>"/>);
+            $set("<c:out value="<%= SystemSettingsDao.SMS_ALARM_LEVEL %>"/>", settings.<c:out value="<%= SystemSettingsDao.SMS_ALARM_LEVEL %>"/>);
+            emailEventsChange();
+            $set("<c:out value="<%= SystemSettingsDao.SMS_USERNAME %>"/>", settings.<c:out value="<%= SystemSettingsDao.SMS_USERNAME %>"/>);
+            $set("<c:out value="<%= SystemSettingsDao.SMS_PASSWORD %>"/>", settings.<c:out value="<%= SystemSettingsDao.SMS_PASSWORD %>"/>);            
             
             var alarmFunctions = [
                 function(et) { return et.description; },
@@ -180,6 +187,21 @@
         setUserMessage("emailMessage");
         startImageFader("sendTestEmailImg");
     }
+
+   	function saveSmsSettings() {
+   		SystemSettingsDwr.saveSmsSettings(
+   				$get("<c:out value="<%= SystemSettingsDao.SMS_USERNAME %>"/>"),
+   				$get("<c:out value="<%= SystemSettingsDao.SMS_PASSWORD %>"/>"),
+   				$get("<c:out value="<%= SystemSettingsDao.SMS_ALARM_LEVEL %>"/>"),
+   				$get("<c:out value="<%= SystemSettingsDao.INSTANCE_NAME %>"/>"),
+   				$get("<c:out value="<%= SystemSettingsDao.EMAIL_EVENT_HANDLERS_DISABLED %>"/>"),
+   				function() {
+   					stopImageFader("saveSmsSettingsImg");
+   					setUserMessage("smsMessage", "SMS Settings Saved");
+   				});
+   		setUserMessage("smsMessage");
+   		startImageFader("saveSmsSettingsImg");
+   	}    
     
     function updateAlarmLevel(eventTypeId, eventId, alarmLevel) {
         setAlarmLevelImg(alarmLevel, "alarmLevelImg"+ eventTypeId +"-"+ eventId);
@@ -214,6 +236,11 @@
         setDisabled($("<c:out value="<%= SystemSettingsDao.EMAIL_SMTP_USERNAME %>"/>"), !auth);
         setDisabled($("<c:out value="<%= SystemSettingsDao.EMAIL_SMTP_PASSWORD %>"/>"), !auth);
     }
+
+
+	function emailEventsChange() {
+    	var emailEvents =  $("<c:out value="<%= SystemSettingsDao.EMAIL_EVENT_HANDLERS_DISABLED %>"/>").checked;
+    }    
     
     function saveHttpSettings() {
         SystemSettingsDwr.saveHttpSettings(
@@ -529,6 +556,55 @@
       </tr>
     </table>
   </div>
+
+     <div class="borderDiv marB marR" style="clear:left;float:left">
+       <table width="100%">
+               <tr>
+                 <td>
+                   <span class="smallTitle">SMS Settings</span>
+                   <tag:help id="SmsSettings"/>
+                 </td>
+                 <td align="right">
+                   <tag:img id="saveSmsSettingsImg" png="save" onclick="saveSmsSettings();" title="common.save"/>
+                 </td>
+               </tr>
+             </table>
+             <table>
+               <tr>
+                 <td class="formLabel">Instance Name</td>
+                 <td class="formField"><input id="<c:out value="<%= SystemSettingsDao.INSTANCE_NAME %>"/>" type="text"/></td>
+               </tr>
+               <tr>
+                 <td class="formLabel">Alarms Suppressed</td>
+                 <td class="formField"><input id="<c:out value="<%= SystemSettingsDao.EMAIL_EVENT_HANDLERS_DISABLED %>"/>" type="checkbox" /></td>
+               </tr>
+               <tr>
+                 <td class="formLabel">SMS Alarm Level</td>
+                 <td class="formField">
+                 
+                           <select id="<c:out value="<%= SystemSettingsDao.SMS_ALARM_LEVEL %>"/>">;
+                           <option value='<c:out value="<%= AlarmLevels.NONE %>"/>'><fmt:message key="<%= AlarmLevels.NONE_DESCRIPTION %>"/></option>
+                           <option value='<c:out value="<%= AlarmLevels.INFORMATION %>"/>'><fmt:message key="<%= AlarmLevels.INFORMATION_DESCRIPTION %>"/></option>
+                           <option value='<c:out value="<%= AlarmLevels.URGENT %>"/>'><fmt:message key="<%= AlarmLevels.URGENT_DESCRIPTION %>"/></option>
+                           <option value='<c:out value="<%= AlarmLevels.CRITICAL %>"/>'><fmt:message key="<%= AlarmLevels.CRITICAL_DESCRIPTION %>"/></option>
+                           <option value='<c:out value="<%= AlarmLevels.LIFE_SAFETY %>"/>'><fmt:message key="<%= AlarmLevels.LIFE_SAFETY_DESCRIPTION %>"/></option>
+                           </select> 
+                 </td>
+               </tr>                                  
+               <tr>
+                 <td class="formLabel">SMS Username</td>
+                 <td class="formField"><input id="<c:out value="<%= SystemSettingsDao.SMS_USERNAME %>"/>" type="text"/></td>
+               </tr>
+               <tr>
+                 <td class="formLabel">SMS Password</td>
+                 <td class="formField"><input id="<c:out value="<%= SystemSettingsDao.SMS_PASSWORD %>"/>" type="text"/></td>
+               </tr>
+               <tr>
+                 <td colspan="2" id="smsMessage" class="formError"></td>
+               </tr>
+             </table>
+             </div>
+
   
   <div class="borderDiv marB marR" style="float:left">
     <table width="100%">

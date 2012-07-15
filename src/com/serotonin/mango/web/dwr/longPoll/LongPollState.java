@@ -43,6 +43,8 @@ public class LongPollState implements Serializable {
     private String pendingAlarmsContent;
     private List<CustomComponentState> customViewStates = new ArrayList<CustomComponentState>();
     private Long lastChat = (long) 0;
+    private boolean inhibitEmailEventHandlers;
+
 
     public WatchListState getWatchListState(String id) {
         return (WatchListState) getBasePointState(id, watchListStates);
@@ -131,6 +133,16 @@ public class LongPollState implements Serializable {
 	public long getLastChat() {
 		return lastChat;
 	}
+
+
+    public void setInhibitEmailEventHandlers(boolean inhibitEmailEventHandlers) {
+    	this.inhibitEmailEventHandlers = inhibitEmailEventHandlers;
+    }
+
+    public boolean getInhibitEmailEventHandlers() {
+    	return inhibitEmailEventHandlers;
+    }    
+    
 
     /**
      * @param out
