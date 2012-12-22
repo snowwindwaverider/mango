@@ -234,9 +234,10 @@ public class DataPointRT implements IDataPoint, ILifecycle, TimeoutClient {
         case DataPointVO.LoggingTypes.ON_TS_CHANGE:
             if (pointValue == null)
                 logValue = true;
-            else if (backdated)
-                // Backdated. Ignore it
-                logValue = false;
+            // Allow point values to be backdated for on time stamp change logging type.
+            //else if (backdated)
+            //    // Backdated. Ignore it
+            //    logValue = false;
             else
                 logValue = newValue.getTime() != pointValue.getTime();
 
@@ -252,8 +253,8 @@ public class DataPointRT implements IDataPoint, ILifecycle, TimeoutClient {
         if (saveValue)
             valueCache.savePointValue(newValue, source, logValue, async);
 
-        // Ignore historical values.
-        if (pointValue == null || newValue.getTime() >= pointValue.getTime()) {
+        // Ignore historical values, except for on timestamp change logging type
+        if (pointValue == null || newValue.getTime() >= pointValue.getTime() && vo.getLoggingType() != DataPointVO.LoggingTypes.ON_TS_CHANGE) {
             PointValueTime oldValue = pointValue;
             pointValue = newValue;
             fireEvents(oldValue, newValue, source != null, false);
