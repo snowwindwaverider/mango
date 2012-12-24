@@ -86,10 +86,11 @@ mango.longPoll.pollCB = function(response) {
         if (response.highestUnsilencedAlarmLevel > 0) {
             setAlarmLevelImg(response.highestUnsilencedAlarmLevel, $("__header__alarmLevelImg"));
             setAlarmLevelText(response.highestUnsilencedAlarmLevel, $("__header__alarmLevelText"));
-            if (!mango.header.evtVisualizer.started)
-                mango.header.evtVisualizer.start();
-            show("__header__alarmLevelDiv");
-            mango.soundPlayer.play("level"+ response.highestUnsilencedAlarmLevel);
+        // don't play sounds or blink the alarm level for now    
+        //    if (!mango.header.evtVisualizer.started)
+        //        mango.header.evtVisualizer.start();
+        //    show("__header__alarmLevelDiv");
+        //    mango.soundPlayer.play("level"+ response.highestUnsilencedAlarmLevel);
         }
         else {
             hide("__header__alarmLevelDiv");
